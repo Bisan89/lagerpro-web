@@ -9,6 +9,7 @@ function OrderForm() {
   const [items, setItems] = useState([]);
   const [customerId, setCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
+  const [customerData, setCustomerData] = useState(null);
   const [showCustomerList, setShowCustomerList] = useState(false);
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
   const [status, setStatus] = useState('Pending');
@@ -48,10 +49,24 @@ function OrderForm() {
     }
   }, [productSearch, products]);
 
+  async function q(sql, args = []) {
+    const url = sessionStorage.getItem('turso_url');
+    const token = sessionStorage.getItem('turso_token');
+    const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
+    const data = await res.json();
+    return data.rows || [];
+  }
+
+  async function execute(sql, args = []) {
+    const url = sessionStorage.getItem('turso_url');
+    const token = sessionStorage.getItem('turso_token');
+    await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
+  }
+
   async function loadInit(url, token) {
     const [custs, prods] = await Promise.all([
       fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, token, sql: 'SELECT CustomerId, Name FROM Customers ORDER BY Name' }) }).then(r => r.json()).then(d => d.rows || []),
+        body: JSON.stringify({ url, token, sql: 'SELECT CustomerId, Name, Company, Address, Phone FROM Customers ORDER BY Name' }) }).then(r => r.json()).then(d => d.rows || []),
       fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, token, sql: 'SELECT ProductId, ProductCode, NameSE, NameAR, PiecesPerBox, Price FROM Products ORDER BY NameSE' }) }).then(r => r.json()).then(d => d.rows || []),
     ]);
@@ -72,6 +87,16 @@ function OrderForm() {
       setCustomerId(String(order[0].CustomerId || ''));
       setOrderDate(order[0].OrderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
       setStatus(order[0].Status || 'Pending');
+
+      // جيب بيانات العميل الكاملة
+      if (order[0].CustomerId) {
+        const custRows = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, token, sql: 'SELECT * FROM Customers WHERE CustomerId=?', args: [order[0].CustomerId] }) }).then(r => r.json()).then(d => d.rows || []);
+        if (custRows[0]) {
+          setCustomerData(custRows[0]);
+          setCustomerSearch(custRows[0].Name);
+        }
+      }
     }
     setItems(orderItems.map(i => ({
       ProductCode: i.ProductCode, NameSE: i.NameSE, NameAR: i.NameAR,
@@ -91,6 +116,7 @@ function OrderForm() {
   function selectCustomer(c) {
     setCustomerId(String(c.CustomerId));
     setCustomerSearch(c.Name);
+    setCustomerData(c);
     setShowCustomerList(false);
   }
 
@@ -106,22 +132,8 @@ function OrderForm() {
     setSelProduct(null); setProductSearch(''); setBoxes(''); setPrice('');
   }
 
-  async function execute(sql, args = []) {
-    const url = sessionStorage.getItem('turso_url');
-    const token = sessionStorage.getItem('turso_token');
-    await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
-  }
-
-  async function q(sql, args = []) {
-    const url = sessionStorage.getItem('turso_url');
-    const token = sessionStorage.getItem('turso_token');
-    const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
-    const data = await res.json();
-    return data.rows || [];
-  }
-
   const total = items.reduce((s, i) => s + i.RowTotal, 0);
-  const customerName = customers.find(c => String(c.CustomerId) === String(customerId))?.Name || customerSearch;
+  const customerName = customerData?.Name || customerSearch;
 
   async function handleSave() {
     if (!customerId) return alert('اختر عميل');
@@ -152,11 +164,19 @@ function OrderForm() {
 
   function handlePrint(type) {
     setPrintType(type);
-    setTimeout(() => window.print(), 100);
+    setTimeout(() => window.print(), 150);
   }
 
   const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
   const statuses = ['Pending', 'Done', 'Levererad', 'Skickad', 'Edited'];
+
+  // تنسيق التاريخ بالعربي
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const d = new Date(dateStr);
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">جارٍ التحميل...</div>;
 
@@ -174,31 +194,42 @@ function OrderForm() {
 
       {/* Print View */}
       <div className="print-only" style={{ padding: '30px', fontFamily: 'Arial, sans-serif' }}>
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
+        {/* العنوان */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 'bold', margin: 0, letterSpacing: '2px' }}>
             {printType === 'foljesedel' ? 'FÖLJESEDEL' : 'ORDER'}
           </h1>
         </div>
-        <div style={{ marginBottom: '16px', fontSize: '13px' }}>
-          <p style={{ margin: '4px 0' }}><strong>Ordernr:</strong> {orderId || 'NY'}</p>
-          <p style={{ margin: '4px 0' }}><strong>Datum:</strong> {orderDate}</p>
-          <p style={{ margin: '4px 0' }}><strong>Kund:</strong> {customerName}</p>
+
+        {/* معلومات الطلب */}
+        <div style={{ marginBottom: '20px', fontSize: '13px' }}>
+          <p style={{ margin: '3px 0' }}><strong>Ordernr:</strong> {orderId || 'NY'}</p>
+          <p style={{ margin: '3px 0' }}><strong>Datum:</strong> {formatDate(orderDate)}</p>
         </div>
+
+        {/* معلومات العميل */}
+        <div style={{ marginBottom: '20px', fontSize: '13px', direction: 'rtl', textAlign: 'right' }}>
+          <p style={{ margin: '3px 0', fontSize: '14px' }}>السيد {customerName} المحترم</p>
+          {customerData?.Company && <p style={{ margin: '3px 0' }}>{customerData.Company}</p>}
+          {customerData?.Address && <p style={{ margin: '3px 0' }}>{customerData.Address}</p>}
+        </div>
+
+        {/* الجدول */}
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
           <thead>
-            <tr style={{ backgroundColor: '#2D3E50', color: 'white' }}>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'left' }}>Kod</th>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'left' }}>Produkt (SE)</th>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Produkt (AR)</th>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>Krt</th>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>Per krt</th>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Pris/st</th>
-              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Totalt</th>
+            <tr style={{ backgroundColor: '#f0f0f0' }}>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'left' }}>Kod</th>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'left' }}>Produkt (SE)</th>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'right' }}>Produkt (AR)</th>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'center' }}>Krt</th>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'center' }}>Per krt</th>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'right' }}>Pris/st</th>
+              <th style={{ border: '1px solid #999', padding: '6px 8px', textAlign: 'right' }}>Totalt</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, i) => (
-              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#f5f7f9' }}>
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#f9f9f9' }}>
                 <td style={{ border: '1px solid #ccc', padding: '6px 8px' }}>{item.ProductCode}</td>
                 <td style={{ border: '1px solid #ccc', padding: '6px 8px' }}>{item.NameSE}</td>
                 <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right', direction: 'rtl' }}>{item.NameAR}</td>
@@ -210,7 +241,7 @@ function OrderForm() {
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ backgroundColor: '#f5f7f9', fontWeight: 'bold' }}>
+            <tr style={{ fontWeight: 'bold' }}>
               <td colSpan={6} style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Ordertotal:</td>
               <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{total.toFixed(2)} kr</td>
             </tr>
@@ -249,7 +280,7 @@ function OrderForm() {
               <div className="relative">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Kund</label>
                 <input type="text" value={customerSearch}
-                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerList(true); setCustomerId(''); }}
+                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerList(true); setCustomerId(''); setCustomerData(null); }}
                   onFocus={() => setShowCustomerList(true)}
                   placeholder="ابحث عن عميل..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
@@ -258,7 +289,8 @@ function OrderForm() {
                     {filteredCustomers.map(c => (
                       <button key={c.CustomerId} onClick={() => selectCustomer(c)}
                         className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100">
-                        {c.Name}
+                        <div>{c.Name}</div>
+                        {c.Company && <div className="text-xs text-gray-400">{c.Company}</div>}
                       </button>
                     ))}
                   </div>
