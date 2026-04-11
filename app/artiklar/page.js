@@ -49,12 +49,8 @@ export default function Artiklar() {
   }
 
   function handleSort(key) {
-    if (sortKey === key) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
   }
 
   function SortIcon({ col }) {
@@ -70,15 +66,7 @@ export default function Artiklar() {
 
   function openEdit(p) {
     setEditing(p);
-    setForm({
-      ProductCode: p.ProductCode || '',
-      NameSE: p.NameSE || '',
-      NameAR: p.NameAR || '',
-      PiecesPerBox: p.PiecesPerBox || '',
-      Price: p.Price || '',
-      Moms: p.Moms || '12',
-      MinStock: p.MinStock || '0'
-    });
+    setForm({ ProductCode: p.ProductCode || '', NameSE: p.NameSE || '', NameAR: p.NameAR || '', PiecesPerBox: p.PiecesPerBox || '', Price: p.Price || '', Moms: p.Moms || '12', MinStock: p.MinStock || '0' });
     setShowModal(true);
   }
 
@@ -87,15 +75,11 @@ export default function Artiklar() {
     setSaving(true);
     try {
       if (editing) {
-        await execute(
-          'UPDATE Products SET ProductCode=?, NameSE=?, NameAR=?, PiecesPerBox=?, Price=?, Moms=?, MinStock=? WHERE ProductId=?',
-          [form.ProductCode, form.NameSE, form.NameAR, Number(form.PiecesPerBox), Number(form.Price), Number(form.Moms), Number(form.MinStock), editing.ProductId]
-        );
+        await execute('UPDATE Products SET ProductCode=?, NameSE=?, NameAR=?, PiecesPerBox=?, Price=?, Moms=?, MinStock=? WHERE ProductId=?',
+          [form.ProductCode, form.NameSE, form.NameAR, Number(form.PiecesPerBox), Number(form.Price), Number(form.Moms), Number(form.MinStock), editing.ProductId]);
       } else {
-        await execute(
-          'INSERT INTO Products (ProductCode, NameSE, NameAR, PiecesPerBox, Price, Moms, MinStock) VALUES (?,?,?,?,?,?,?)',
-          [form.ProductCode, form.NameSE, form.NameAR, Number(form.PiecesPerBox), Number(form.Price), Number(form.Moms), Number(form.MinStock)]
-        );
+        await execute('INSERT INTO Products (ProductCode, NameSE, NameAR, PiecesPerBox, Price, Moms, MinStock) VALUES (?,?,?,?,?,?,?)',
+          [form.ProductCode, form.NameSE, form.NameAR, Number(form.PiecesPerBox), Number(form.Price), Number(form.Moms), Number(form.MinStock)]);
       }
       setShowModal(false);
       const url = sessionStorage.getItem('turso_url');
@@ -120,15 +104,12 @@ export default function Artiklar() {
       (p.ProductCode?.includes(search))
     )
     .sort((a, b) => {
-      const av = a[sortKey] ?? '';
-      const bv = b[sortKey] ?? '';
-      const cmp = typeof av === 'number'
-        ? av - bv
-        : String(av).localeCompare(String(bv));
+      const av = a[sortKey] ?? ''; const bv = b[sortKey] ?? '';
+      const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
       return sortDir === 'asc' ? cmp : -cmp;
     });
 
-  const thClass = "px-4 py-3 cursor-pointer select-none hover:bg-[#3d5268] transition";
+  const thClass = "px-4 py-3 cursor-pointer select-none hover:bg-[#3d5268] transition text-left whitespace-nowrap";
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -137,53 +118,49 @@ export default function Artiklar() {
           <button onClick={() => router.push('/dashboard')} className="text-gray-300 hover:text-white">← رجوع</button>
           <h1 className="text-xl font-bold">Artiklar</h1>
         </div>
-        <button onClick={openNew} className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition">
-          + ny artikel
-        </button>
+        <button onClick={openNew} className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition">+ ny artikel</button>
       </div>
 
-      <div className="max-w-6xl mx-auto p-6 space-y-4">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+      <div className="max-w-6xl mx-auto p-4 space-y-4">
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
           placeholder="بحث..."
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]"
-        />
+          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
 
         {loading ? (
           <div className="text-center py-10 text-gray-400">جارٍ التحميل...</div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-[#2D3E50] text-white text-left">
-                <tr>
-                  <th className={thClass} onClick={() => handleSort('ProductCode')}>Kod <SortIcon col="ProductCode"/></th>
-                  <th className={thClass} onClick={() => handleSort('NameSE')}>Namn SE <SortIcon col="NameSE"/></th>
-                  <th className={`${thClass} text-right`} onClick={() => handleSort('NameAR')}>اسم عربي <SortIcon col="NameAR"/></th>
-                  <th className={`${thClass} text-center`} onClick={() => handleSort('PiecesPerBox')}>Per krt <SortIcon col="PiecesPerBox"/></th>
-                  <th className={`${thClass} text-right`} onClick={() => handleSort('Price')}>Pris <SortIcon col="Price"/></th>
-                  <th className={`${thClass} text-center`} onClick={() => handleSort('Moms')}>Moms <SortIcon col="Moms"/></th>
-                  <th className="px-4 py-3 text-center">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((p, i) => (
-                  <tr key={p.ProductId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 font-mono text-gray-500">{p.ProductCode}</td>
-                    <td className="px-4 py-3 font-medium">{p.NameSE}</td>
-                    <td className="px-4 py-3 text-right text-gray-600">{p.NameAR}</td>
-                    <td className="px-4 py-3 text-center">{p.PiecesPerBox}</td>
-                    <td className="px-4 py-3 text-right font-medium">{Number(p.Price).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-center text-gray-500">{p.Moms}%</td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => openEdit(p)} className="text-blue-500 hover:text-blue-700 mr-3 text-xs font-medium">تعديل</button>
-                      <button onClick={() => handleDelete(p)} className="text-red-500 hover:text-red-700 text-xs font-medium">حذف</button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[650px]">
+                <thead className="bg-[#2D3E50] text-white">
+                  <tr>
+                    <th className={thClass} onClick={() => handleSort('ProductCode')}>Kod <SortIcon col="ProductCode"/></th>
+                    <th className={thClass} onClick={() => handleSort('NameSE')}>Namn SE <SortIcon col="NameSE"/></th>
+                    <th className={`${thClass} text-right`} onClick={() => handleSort('NameAR')}>عربي <SortIcon col="NameAR"/></th>
+                    <th className={`${thClass} text-center`} onClick={() => handleSort('PiecesPerBox')}>Per krt <SortIcon col="PiecesPerBox"/></th>
+                    <th className={`${thClass} text-right`} onClick={() => handleSort('Price')}>Pris <SortIcon col="Price"/></th>
+                    <th className={`${thClass} text-center`} onClick={() => handleSort('Moms')}>Moms <SortIcon col="Moms"/></th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">إجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map((p, i) => (
+                    <tr key={p.ProductId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">{p.ProductCode}</td>
+                      <td className="px-4 py-3 font-medium">{p.NameSE}</td>
+                      <td className="px-4 py-3 text-right text-gray-600">{p.NameAR}</td>
+                      <td className="px-4 py-3 text-center">{p.PiecesPerBox}</td>
+                      <td className="px-4 py-3 text-right font-medium">{Number(p.Price).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center text-gray-500">{p.Moms}%</td>
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <button onClick={() => openEdit(p)} className="text-blue-500 hover:text-blue-700 mr-3 text-xs font-medium">تعديل</button>
+                        <button onClick={() => handleDelete(p)} className="text-red-500 hover:text-red-700 text-xs font-medium">حذف</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="px-4 py-3 bg-gray-50 text-sm text-gray-500 border-t">{filtered.length} منتج</div>
           </div>
         )}
@@ -207,12 +184,9 @@ export default function Artiklar() {
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
-                  <input
-                    type={f.type || 'text'}
-                    value={form[f.key]}
+                  <input type={f.type || 'text'} value={form[f.key]}
                     onChange={e => setForm({ ...form, [f.key]: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]"
-                  />
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
                 </div>
               ))}
             </div>
