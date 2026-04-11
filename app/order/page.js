@@ -202,17 +202,18 @@ function OrderForm() {
         </div>
 
         {/* معلومات الطلب */}
-        <div style={{ marginBottom: '20px', fontSize: '13px' }}>
-          <p style={{ margin: '3px 0' }}><strong>Ordernr:</strong> {orderId || 'NY'}</p>
-          <p style={{ margin: '3px 0' }}><strong>Datum:</strong> {formatDate(orderDate)}</p>
-        </div>
-
-        {/* معلومات العميل */}
-        <div style={{ marginBottom: '20px', fontSize: '13px', direction: 'rtl', textAlign: 'right' }}>
-          <p style={{ margin: '3px 0', fontSize: '14px' }}>السيد {customerName} المحترم</p>
-          {customerData?.Company && <p style={{ margin: '3px 0' }}>{customerData.Company}</p>}
-          {customerData?.Address && <p style={{ margin: '3px 0' }}>{customerData.Address}</p>}
-        </div>
+        // ✅ الجديد — Ordernr والسيد X في نفس السطر
+<div style={{ marginBottom: '20px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+  <div>
+    <p style={{ margin: '3px 0' }}><strong>Ordernr:</strong> {orderId || 'NY'}</p>
+    <p style={{ margin: '3px 0' }}><strong>Datum:</strong> {formatDate(orderDate)}</p>
+  </div>
+  <div style={{ textAlign: 'right', direction: 'rtl' }}>
+    <p style={{ margin: '3px 0', fontSize: '14px' }}>السيد {customerName} المحترم</p>
+    {customerData?.Company && <p style={{ margin: '3px 0' }}>{customerData.Company}</p>}
+    {customerData?.Address && <p style={{ margin: '3px 0' }}>{customerData.Address}</p>}
+  </div>
+</div>
 
         {/* الجدول */}
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
