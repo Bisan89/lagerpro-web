@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function OrderForm() {
   const [customers, setCustomers] = useState([]);
@@ -148,9 +150,58 @@ function OrderForm() {
     setSaving(false);
   }
 
-  function handlePrint() {
-    window.print();
-  }
+  function generatePDF(type) {
+  const doc = new jsPDF();
+  const isFollowup = type === 'foljesedel';
+  const customerName = customers.find(c => String(c.CustomerId) === String(customerId))?.Name || customerSearch;
+
+  // Header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text(isFollowup ? 'FÖLJESEDEL' : 'ORDER', 105, 20, { align: 'center' });
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Ordernr: ${orderId || 'NY'}`, 14, 35);
+  doc.text(`Datum: ${orderDate}`, 14, 42);
+  doc.text(`Kund: ${customerName}`, 14, 49);
+
+  const headers = [['Kod', 'Produkt (SE)', 'Produkt (AR)', 'Krt', 'Per krt', 'Pris/st', 'Totalt']];
+  const rows = items.map(i => [
+    i.ProductCode || '',
+    i.NameSE || '',
+    i.NameAR || '',
+    i.Boxes,
+    i.PiecesPerBox,
+    Number(i.Price).toFixed(2),
+    Number(i.RowTotal).toFixed(2)
+  ]);
+
+  autoTable(doc, {
+    head: headers,
+    body: rows,
+    startY: 58,
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [45, 62, 80], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 247, 249] },
+    columnStyles: {
+      0: { cellWidth: 18 },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 45 },
+      3: { cellWidth: 12, halign: 'center' },
+      4: { cellWidth: 18, halign: 'center' },
+      5: { cellWidth: 22, halign: 'right' },
+      6: { cellWidth: 22, halign: 'right' },
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(`Ordertotal: ${total.toFixed(2)} kr`, 14, finalY);
+
+  doc.save(isFollowup ? `FOLJESEDEL_${orderId || 'NY'}.pdf` : `Order_${orderId || 'NY'}.pdf`);
+}
 
   const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
   const statuses = ['Pending', 'Done', 'Levererad', 'Skickad', 'Edited'];
@@ -222,16 +273,20 @@ function OrderForm() {
             <button onClick={() => router.push('/orders')} className="text-gray-300 hover:text-white">← رجوع</button>
             <h1 className="text-xl font-bold">{orderId ? `Order #${orderId}` : 'Ny order'}</h1>
           </div>
-          <div className="flex gap-2">
-            <button onClick={handlePrint}
-              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-2 rounded-lg transition font-bold">
-              🖨️
-            </button>
-            <button onClick={handleSave} disabled={saving}
-              className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
-              {saving ? '...' : '💾 Spara'}
-            </button>
-          </div>
+         <div className="flex gap-2">
+  <button onClick={() => generatePDF('order')}
+    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
+    📄 Order
+  </button>
+  <button onClick={() => generatePDF('foljesedel')}
+    className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
+    📋 Följesedel
+  </button>
+  <button onClick={handleSave} disabled={saving}
+    className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
+    {saving ? '...' : '💾 Spara'}
+  </button>
+</div>
         </div>
 
         <div className="max-w-4xl mx-auto p-4 space-y-4">
