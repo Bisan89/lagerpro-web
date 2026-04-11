@@ -1,8 +1,6 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 function OrderForm() {
   const [customers, setCustomers] = useState([]);
@@ -22,6 +20,7 @@ function OrderForm() {
   const [selProduct, setSelProduct] = useState(null);
   const [boxes, setBoxes] = useState('');
   const [price, setPrice] = useState('');
+  const [printType, setPrintType] = useState('order');
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -122,6 +121,7 @@ function OrderForm() {
   }
 
   const total = items.reduce((s, i) => s + i.RowTotal, 0);
+  const customerName = customers.find(c => String(c.CustomerId) === String(customerId))?.Name || customerSearch;
 
   async function handleSave() {
     if (!customerId) return alert('اختر عميل');
@@ -150,117 +150,69 @@ function OrderForm() {
     setSaving(false);
   }
 
-  function generatePDF(type) {
-  const doc = new jsPDF();
-  const isFollowup = type === 'foljesedel';
-  const customerName = customers.find(c => String(c.CustomerId) === String(customerId))?.Name || customerSearch;
-
-  // Header
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text(isFollowup ? 'FÖLJESEDEL' : 'ORDER', 105, 20, { align: 'center' });
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Ordernr: ${orderId || 'NY'}`, 14, 35);
-  doc.text(`Datum: ${orderDate}`, 14, 42);
-  doc.text(`Kund: ${customerName}`, 14, 49);
-
-  const headers = [['Kod', 'Produkt (SE)', 'Produkt (AR)', 'Krt', 'Per krt', 'Pris/st', 'Totalt']];
-  const rows = items.map(i => [
-    i.ProductCode || '',
-    i.NameSE || '',
-    i.NameAR || '',
-    i.Boxes,
-    i.PiecesPerBox,
-    Number(i.Price).toFixed(2),
-    Number(i.RowTotal).toFixed(2)
-  ]);
-
-  autoTable(doc, {
-    head: headers,
-    body: rows,
-    startY: 58,
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [45, 62, 80], textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245, 247, 249] },
-    columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 45 },
-      2: { cellWidth: 45 },
-      3: { cellWidth: 12, halign: 'center' },
-      4: { cellWidth: 18, halign: 'center' },
-      5: { cellWidth: 22, halign: 'right' },
-      6: { cellWidth: 22, halign: 'right' },
-    }
-  });
-
-  const finalY = doc.lastAutoTable.finalY + 8;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text(`Ordertotal: ${total.toFixed(2)} kr`, 14, finalY);
-
-  doc.save(isFollowup ? `FOLJESEDEL_${orderId || 'NY'}.pdf` : `Order_${orderId || 'NY'}.pdf`);
-}
+  function handlePrint(type) {
+    setPrintType(type);
+    setTimeout(() => window.print(), 100);
+  }
 
   const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
   const statuses = ['Pending', 'Done', 'Levererad', 'Skickad', 'Edited'];
-  const customerName = customers.find(c => String(c.CustomerId) === String(customerId))?.Name || customerSearch;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">جارٍ التحميل...</div>;
 
   return (
     <>
-      {/* Print CSS */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
           .print-only { display: block !important; }
-          body { background: white; }
+          body { background: white; margin: 0; padding: 0; }
+          * { font-family: Arial, sans-serif !important; }
         }
         .print-only { display: none; }
       `}</style>
 
       {/* Print View */}
-      <div className="print-only p-8">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold">Lager Pro</h1>
-          <p className="text-gray-600">Order #{orderId}</p>
+      <div className="print-only" style={{ padding: '30px', fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
+            {printType === 'foljesedel' ? 'FÖLJESEDEL' : 'ORDER'}
+          </h1>
         </div>
-        <div className="mb-4 flex justify-between">
-          <div><strong>Kund:</strong> {customerName}</div>
-          <div><strong>Datum:</strong> {orderDate}</div>
-          <div><strong>Status:</strong> {status}</div>
+        <div style={{ marginBottom: '16px', fontSize: '13px' }}>
+          <p style={{ margin: '4px 0' }}><strong>Ordernr:</strong> {orderId || 'NY'}</p>
+          <p style={{ margin: '4px 0' }}><strong>Datum:</strong> {orderDate}</p>
+          <p style={{ margin: '4px 0' }}><strong>Kund:</strong> {customerName}</p>
         </div>
-        <table className="w-full border-collapse border border-gray-300 text-sm">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-3 py-2 text-left">Kod</th>
-              <th className="border border-gray-300 px-3 py-2 text-left">Produkt</th>
-              <th className="border border-gray-300 px-3 py-2 text-right">اسم عربي</th>
-              <th className="border border-gray-300 px-3 py-2 text-center">Krt</th>
-              <th className="border border-gray-300 px-3 py-2 text-center">Per</th>
-              <th className="border border-gray-300 px-3 py-2 text-right">Pris</th>
-              <th className="border border-gray-300 px-3 py-2 text-right">Totalt</th>
+            <tr style={{ backgroundColor: '#2D3E50', color: 'white' }}>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'left' }}>Kod</th>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'left' }}>Produkt (SE)</th>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Produkt (AR)</th>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>Krt</th>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>Per krt</th>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Pris/st</th>
+              <th style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Totalt</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, i) => (
-              <tr key={i}>
-                <td className="border border-gray-300 px-3 py-2">{item.ProductCode}</td>
-                <td className="border border-gray-300 px-3 py-2">{item.NameSE}</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">{item.NameAR}</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">{item.Boxes}</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">{item.PiecesPerBox}</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">{Number(item.Price).toFixed(2)}</td>
-                <td className="border border-gray-300 px-3 py-2 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#f5f7f9' }}>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px' }}>{item.ProductCode}</td>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px' }}>{item.NameSE}</td>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right', direction: 'rtl' }}>{item.NameAR}</td>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>{item.Boxes}</td>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>{item.PiecesPerBox}</td>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{Number(item.Price).toFixed(2)}</td>
+                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{Number(item.RowTotal).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="bg-gray-100 font-bold">
-              <td colSpan={6} className="border border-gray-300 px-3 py-2 text-right">Totalt:</td>
-              <td className="border border-gray-300 px-3 py-2 text-right">{total.toFixed(2)}</td>
+            <tr style={{ backgroundColor: '#f5f7f9', fontWeight: 'bold' }}>
+              <td colSpan={6} style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Ordertotal:</td>
+              <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{total.toFixed(2)} kr</td>
             </tr>
           </tfoot>
         </table>
@@ -268,30 +220,29 @@ function OrderForm() {
 
       {/* Normal View */}
       <div className="min-h-screen bg-gray-100 no-print">
-        <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between no-print">
+        <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/orders')} className="text-gray-300 hover:text-white">← رجوع</button>
             <h1 className="text-xl font-bold">{orderId ? `Order #${orderId}` : 'Ny order'}</h1>
           </div>
-         <div className="flex gap-2">
-  <button onClick={() => generatePDF('order')}
-    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
-    📄 Order
-  </button>
-  <button onClick={() => generatePDF('foljesedel')}
-    className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
-    📋 Följesedel
-  </button>
-  <button onClick={handleSave} disabled={saving}
-    className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
-    {saving ? '...' : '💾 Spara'}
-  </button>
-</div>
+          <div className="flex gap-2">
+            <button onClick={() => handlePrint('order')}
+              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
+              📄 Order
+            </button>
+            <button onClick={() => handlePrint('foljesedel')}
+              className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
+              📋 Följesedel
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
+              {saving ? '...' : '💾 Spara'}
+            </button>
+          </div>
         </div>
 
         <div className="max-w-4xl mx-auto p-4 space-y-4">
 
-          {/* معلومات الطلب */}
           <div className="bg-white rounded-xl shadow-sm p-5">
             <h2 className="font-bold text-gray-700 mb-4 text-sm">معلومات الطلب</h2>
             <div className="space-y-3">
@@ -330,7 +281,6 @@ function OrderForm() {
             </div>
           </div>
 
-          {/* إضافة منتج */}
           <div className="bg-white rounded-xl shadow-sm p-5">
             <h2 className="font-bold text-gray-700 mb-4 text-sm">إضافة منتج</h2>
             <div className="space-y-3">
@@ -370,10 +320,9 @@ function OrderForm() {
             </div>
           </div>
 
-          {/* بنود الطلب */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
+              <table className="w-full text-sm min-w-[550px]">
                 <thead className="bg-[#2D3E50] text-white">
                   <tr>
                     <th className="px-4 py-3 text-left">Kod</th>
