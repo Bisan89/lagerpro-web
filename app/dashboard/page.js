@@ -64,7 +64,9 @@ export default function Dashboard() {
 
       {/* Navbar */}
       <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Lager Pro</h1>
+<h1 className="text-xl font-bold">
+  {sessionStorage.getItem('warehouse_name') || 'Lager Pro'}
+</h1>
         <div className="flex items-center gap-4">
           <span className="text-gray-300 text-sm">{user?.Name}</span>
           <button
