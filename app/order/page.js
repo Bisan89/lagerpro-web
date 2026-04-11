@@ -69,8 +69,6 @@ function OrderForm() {
     ]);
     if (order[0]) {
       setCustomerId(String(order[0].CustomerId || ''));
-      const cust = customers.find(c => String(c.CustomerId) === String(order[0].CustomerId));
-      if (cust) setCustomerSearch(cust.Name);
       setOrderDate(order[0].OrderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
       setStatus(order[0].Status || 'Pending');
     }
@@ -84,7 +82,7 @@ function OrderForm() {
 
   function selectProduct(p) {
     setSelProduct(p);
-    setProductSearch(`${p.ProductCode} — ${p.NameSE}`);
+    setProductSearch(`${p.ProductCode} — ${p.NameAR || p.NameSE}`);
     setPrice(String(p.Price));
     setShowProductList(false);
   }
@@ -150,157 +148,221 @@ function OrderForm() {
     setSaving(false);
   }
 
+  function handlePrint() {
+    window.print();
+  }
+
   const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
   const statuses = ['Pending', 'Done', 'Levererad', 'Skickad', 'Edited'];
+  const customerName = customers.find(c => String(c.CustomerId) === String(customerId))?.Name || customerSearch;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">جارٍ التحميل...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/orders')} className="text-gray-300 hover:text-white">← رجوع</button>
-          <h1 className="text-xl font-bold">{orderId ? `Order #${orderId}` : 'Ny order'}</h1>
+    <>
+      {/* Print CSS */}
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          body { background: white; }
+        }
+        .print-only { display: none; }
+      `}</style>
+
+      {/* Print View */}
+      <div className="print-only p-8">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold">Lager Pro</h1>
+          <p className="text-gray-600">Order #{orderId}</p>
         </div>
-        <button onClick={handleSave} disabled={saving}
-          className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
-          {saving ? '...' : '💾 Spara'}
-        </button>
+        <div className="mb-4 flex justify-between">
+          <div><strong>Kund:</strong> {customerName}</div>
+          <div><strong>Datum:</strong> {orderDate}</div>
+          <div><strong>Status:</strong> {status}</div>
+        </div>
+        <table className="w-full border-collapse border border-gray-300 text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-300 px-3 py-2 text-left">Kod</th>
+              <th className="border border-gray-300 px-3 py-2 text-left">Produkt</th>
+              <th className="border border-gray-300 px-3 py-2 text-right">اسم عربي</th>
+              <th className="border border-gray-300 px-3 py-2 text-center">Krt</th>
+              <th className="border border-gray-300 px-3 py-2 text-center">Per</th>
+              <th className="border border-gray-300 px-3 py-2 text-right">Pris</th>
+              <th className="border border-gray-300 px-3 py-2 text-right">Totalt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, i) => (
+              <tr key={i}>
+                <td className="border border-gray-300 px-3 py-2">{item.ProductCode}</td>
+                <td className="border border-gray-300 px-3 py-2">{item.NameSE}</td>
+                <td className="border border-gray-300 px-3 py-2 text-right">{item.NameAR}</td>
+                <td className="border border-gray-300 px-3 py-2 text-center">{item.Boxes}</td>
+                <td className="border border-gray-300 px-3 py-2 text-center">{item.PiecesPerBox}</td>
+                <td className="border border-gray-300 px-3 py-2 text-right">{Number(item.Price).toFixed(2)}</td>
+                <td className="border border-gray-300 px-3 py-2 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-100 font-bold">
+              <td colSpan={6} className="border border-gray-300 px-3 py-2 text-right">Totalt:</td>
+              <td className="border border-gray-300 px-3 py-2 text-right">{total.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-
-        {/* معلومات الطلب */}
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <h2 className="font-bold text-gray-700 mb-4 text-sm">معلومات الطلب</h2>
-          <div className="space-y-3">
-
-            {/* بحث عميل */}
-            <div className="relative">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Kund</label>
-              <input type="text" value={customerSearch}
-                onChange={e => { setCustomerSearch(e.target.value); setShowCustomerList(true); setCustomerId(''); }}
-                onFocus={() => setShowCustomerList(true)}
-                placeholder="ابحث عن عميل..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
-              {showCustomerList && customerSearch.length > 0 && filteredCustomers.length > 0 && (
-                <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                  {filteredCustomers.map(c => (
-                    <button key={c.CustomerId} onClick={() => selectCustomer(c)}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100">
-                      {c.Name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Datum</label>
-                <input type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                <select value={status} onChange={e => setStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]">
-                  {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            </div>
+      {/* Normal View */}
+      <div className="min-h-screen bg-gray-100 no-print">
+        <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between no-print">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/orders')} className="text-gray-300 hover:text-white">← رجوع</button>
+            <h1 className="text-xl font-bold">{orderId ? `Order #${orderId}` : 'Ny order'}</h1>
           </div>
-        </div>
-
-        {/* إضافة منتج */}
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <h2 className="font-bold text-gray-700 mb-4 text-sm">إضافة منتج</h2>
-          <div className="space-y-3">
-            {/* بحث منتج */}
-            <div className="relative">
-              <input type="text" value={productSearch}
-                onChange={e => { setProductSearch(e.target.value); setSelProduct(null); }}
-                placeholder="ابحث عن منتج بالاسم أو الكود..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
-              {showProductList && filteredProducts.length > 0 && (
-                <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
-                  {filteredProducts.map(p => (
-                    <button key={p.ProductId} onClick={() => selectProduct(p)}
-                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 border-b border-gray-100">
-                      <div className="font-medium">{p.NameSE}</div>
-                      <div className="text-xs text-gray-400">{p.ProductCode} — {p.NameAR}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">كراتين</label>
-                <input type="number" value={boxes} onChange={e => setBoxes(e.target.value)} min="1"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">سعر</label>
-                <input type="number" value={price} onChange={e => setPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
-              </div>
-            </div>
-
-            <button onClick={addItem}
-              className="w-full bg-[#2D3E50] hover:bg-[#3d5268] text-white text-sm py-2.5 rounded-lg transition font-bold">
-              + Lägg till
+          <div className="flex gap-2">
+            <button onClick={handlePrint}
+              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-2 rounded-lg transition font-bold">
+              🖨️
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
+              {saving ? '...' : '💾 Spara'}
             </button>
           </div>
         </div>
 
-        {/* بنود الطلب */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[500px]">
-              <thead className="bg-[#2D3E50] text-white">
-                <tr>
-                  <th className="px-4 py-3 text-left">Produkt</th>
-                  <th className="px-4 py-3 text-center">Krt</th>
-                  <th className="px-4 py-3 text-center">Per</th>
-                  <th className="px-4 py-3 text-right">Pris</th>
-                  <th className="px-4 py-3 text-right">Totalt</th>
-                  <th className="px-4 py-3 text-center">✕</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">لا توجد منتجات</td></tr>
-                ) : items.map((item, i) => (
-                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-xs">{item.NameSE}</div>
-                      <div className="text-xs text-gray-400">{item.ProductCode}</div>
-                    </td>
-                    <td className="px-4 py-3 text-center">{item.Boxes}</td>
-                    <td className="px-4 py-3 text-center">{item.PiecesPerBox}</td>
-                    <td className="px-4 py-3 text-right">{Number(item.Price).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))} className="text-red-500 font-bold">✕</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-gray-50 border-t-2 border-gray-200">
-                  <td colSpan={4} className="px-4 py-3 text-right font-bold text-gray-700">Totalt:</td>
-                  <td className="px-4 py-3 text-right font-bold text-lg text-[#2D3E50]">{total.toFixed(2)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+        <div className="max-w-4xl mx-auto p-4 space-y-4">
 
+          {/* معلومات الطلب */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <h2 className="font-bold text-gray-700 mb-4 text-sm">معلومات الطلب</h2>
+            <div className="space-y-3">
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Kund</label>
+                <input type="text" value={customerSearch}
+                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerList(true); setCustomerId(''); }}
+                  onFocus={() => setShowCustomerList(true)}
+                  placeholder="ابحث عن عميل..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
+                {showCustomerList && customerSearch.length > 0 && filteredCustomers.length > 0 && (
+                  <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                    {filteredCustomers.map(c => (
+                      <button key={c.CustomerId} onClick={() => selectCustomer(c)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100">
+                        {c.Name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Datum</label>
+                  <input type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                  <select value={status} onChange={e => setStatus(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]">
+                    {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* إضافة منتج */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <h2 className="font-bold text-gray-700 mb-4 text-sm">إضافة منتج</h2>
+            <div className="space-y-3">
+              <div className="relative">
+                <input type="text" value={productSearch}
+                  onChange={e => { setProductSearch(e.target.value); setSelProduct(null); }}
+                  placeholder="ابحث بالاسم العربي أو السويدي أو الكود..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
+                {showProductList && filteredProducts.length > 0 && (
+                  <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
+                    {filteredProducts.map(p => (
+                      <button key={p.ProductId} onClick={() => selectProduct(p)}
+                        className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 border-b border-gray-100">
+                        <div className="font-medium">{p.NameAR || p.NameSE}</div>
+                        <div className="text-xs text-gray-400">{p.NameSE} — {p.ProductCode}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">كراتين</label>
+                  <input type="number" value={boxes} onChange={e => setBoxes(e.target.value)} min="1"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">سعر</label>
+                  <input type="number" value={price} onChange={e => setPrice(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
+                </div>
+              </div>
+              <button onClick={addItem}
+                className="w-full bg-[#2D3E50] hover:bg-[#3d5268] text-white text-sm py-2.5 rounded-lg transition font-bold">
+                + Lägg till
+              </button>
+            </div>
+          </div>
+
+          {/* بنود الطلب */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
+                <thead className="bg-[#2D3E50] text-white">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Kod</th>
+                    <th className="px-4 py-3 text-left">Produkt SE</th>
+                    <th className="px-4 py-3 text-right">عربي</th>
+                    <th className="px-4 py-3 text-center">Krt</th>
+                    <th className="px-4 py-3 text-center">Per</th>
+                    <th className="px-4 py-3 text-right">Pris</th>
+                    <th className="px-4 py-3 text-right">Totalt</th>
+                    <th className="px-4 py-3 text-center">✕</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 ? (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">لا توجد منتجات</td></tr>
+                  ) : items.map((item, i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">{item.ProductCode}</td>
+                      <td className="px-4 py-3 text-xs">{item.NameSE}</td>
+                      <td className="px-4 py-3 text-right text-xs">{item.NameAR}</td>
+                      <td className="px-4 py-3 text-center">{item.Boxes}</td>
+                      <td className="px-4 py-3 text-center">{item.PiecesPerBox}</td>
+                      <td className="px-4 py-3 text-right">{Number(item.Price).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))} className="text-red-500 font-bold">✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 border-t-2 border-gray-200">
+                    <td colSpan={6} className="px-4 py-3 text-right font-bold text-gray-700">Totalt:</td>
+                    <td className="px-4 py-3 text-right font-bold text-lg text-[#2D3E50]">{total.toFixed(2)}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
