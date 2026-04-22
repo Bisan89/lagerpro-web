@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../hooks/useAuth';
 
 function Toast({ message, type = 'success', onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
@@ -33,13 +34,14 @@ export default function Orders() {
   const [toast, setToast] = useState(null);
   const [delivering, setDelivering] = useState(null);
   const router = useRouter();
+  const { user, ready } = useAuth('orders');
+  if (!ready) return null;
 
   function showToast(msg, type = 'success') { setToast({ msg, type }); }
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    if (!url || !token) { router.push('/'); return; }
     loadOrders(url, token);
   }, []);
 

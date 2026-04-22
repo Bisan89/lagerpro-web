@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Artiklar() {
   const [products, setProducts] = useState([]);
@@ -13,35 +14,26 @@ export default function Artiklar() {
   const [sortKey, setSortKey] = useState('NameSE');
   const [sortDir, setSortDir] = useState('asc');
   const router = useRouter();
+  const { user, ready } = useAuth('artiklar');
+  if (!ready) return null;
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    if (!url || !token) { router.push('/'); return; }
     loadProducts(url, token);
   }, []);
 
   async function execute(sql, args = []) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    await fetch('/api/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, token, sql, args })
-    });
+    await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
   }
 
   async function loadProducts(url, token) {
     setLoading(true);
     try {
-      const res = await fetch('/api/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url, token,
-          sql: 'SELECT ProductId, ProductCode, NameSE, NameAR, PiecesPerBox, Price, Moms, MinStock FROM Products ORDER BY NameSE'
-        })
-      });
+      const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, token, sql: 'SELECT ProductId, ProductCode, NameSE, NameAR, PiecesPerBox, Price, Moms, MinStock FROM Products ORDER BY NameSE' }) });
       const data = await res.json();
       setProducts(data.rows || []);
     } catch { }
@@ -98,11 +90,7 @@ export default function Artiklar() {
   }
 
   const filtered = products
-    .filter(p =>
-      (p.NameSE?.toLowerCase().includes(search.toLowerCase())) ||
-      (p.NameAR?.includes(search)) ||
-      (p.ProductCode?.includes(search))
-    )
+    .filter(p => (p.NameSE?.toLowerCase().includes(search.toLowerCase())) || (p.NameAR?.includes(search)) || (p.ProductCode?.includes(search)))
     .sort((a, b) => {
       const av = a[sortKey] ?? ''; const bv = b[sortKey] ?? '';
       const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
@@ -120,15 +108,10 @@ export default function Artiklar() {
         </div>
         <button onClick={openNew} className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition">+ ny artikel</button>
       </div>
-
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="بحث..."
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..."
           className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
-
-        {loading ? (
-          <div className="text-center py-10 text-gray-400">جارٍ التحميل...</div>
-        ) : (
+        {loading ? <div className="text-center py-10 text-gray-400">جارٍ التحميل...</div> : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[650px]">
@@ -165,27 +148,20 @@ export default function Artiklar() {
           </div>
         )}
       </div>
-
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="bg-[#2D3E50] text-white px-6 py-4 rounded-t-2xl">
+            <div className="bg-[#2D3E50] text-white px-6 py-4 rounded-t-2xl flex justify-between items-center">
               <h2 className="font-bold">{editing ? 'تعديل منتج' : 'منتج جديد'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-white/70 hover:text-white text-xl">✕</button>
             </div>
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-              {[
-                { label: 'Produktkod', key: 'ProductCode' },
-                { label: 'Namn SE', key: 'NameSE' },
-                { label: 'الاسم العربي', key: 'NameAR' },
-                { label: 'Per kartong', key: 'PiecesPerBox', type: 'number' },
-                { label: 'Pris (kr)', key: 'Price', type: 'number' },
-                { label: 'Moms (%)', key: 'Moms', type: 'number' },
-                { label: 'Min lager', key: 'MinStock', type: 'number' },
-              ].map(f => (
+              {[{ label: 'Produktkod', key: 'ProductCode' }, { label: 'Namn SE *', key: 'NameSE' }, { label: 'الاسم العربي', key: 'NameAR' },
+                { label: 'Per kartong', key: 'PiecesPerBox', type: 'number' }, { label: 'Pris (kr)', key: 'Price', type: 'number' },
+                { label: 'Moms (%)', key: 'Moms', type: 'number' }, { label: 'Min lager', key: 'MinStock', type: 'number' }].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{f.label}</label>
-                  <input type={f.type || 'text'} value={form[f.key]}
-                    onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                  <input type={f.type || 'text'} value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
                 </div>
               ))}
@@ -196,9 +172,7 @@ export default function Artiklar() {
                 {saving ? 'جارٍ الحفظ...' : 'حفظ'}
               </button>
               <button onClick={() => setShowModal(false)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-200 transition">
-                إلغاء
-              </button>
+                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-200 transition">إلغاء</button>
             </div>
           </div>
         </div>

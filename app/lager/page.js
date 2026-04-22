@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Lager() {
   const [stock, setStock] = useState([]);
@@ -15,11 +16,12 @@ export default function Lager() {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const router = useRouter();
+  const { user, ready } = useAuth('lager');
+  if (!ready) return null;
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    if (!url || !token) { router.push('/'); return; }
     loadAll(url, token);
   }, []);
 
@@ -33,7 +35,6 @@ export default function Lager() {
             IFNULL(SUM(CASE WHEN m.MovementType IN ('IN','OPENING') THEN m.Boxes ELSE 0 END), 0) AS Incoming,
             IFNULL(SUM(CASE WHEN m.MovementType = 'OUT' THEN m.Boxes ELSE 0 END), 0) AS Outgoing,
             IFNULL(SUM(CASE WHEN m.MovementType = 'RETURN' THEN m.Boxes ELSE 0 END), 0) AS Returned,
-            IFNULL(SUM(CASE WHEN m.MovementType = 'ADJUST' THEN m.Boxes ELSE 0 END), 0) AS Adjusted,
             IFNULL(SUM(CASE WHEN m.MovementType IN ('IN','OPENING','RETURN','ADJUST') THEN m.Boxes
                          WHEN m.MovementType = 'OUT' THEN -m.Boxes ELSE 0 END), 0) AS Balance
             FROM Products p LEFT JOIN StockMovements m ON m.ProductId = p.ProductId
@@ -90,83 +91,38 @@ export default function Lager() {
 
   const totalBoxes = filtered.reduce((s, p) => s + Number(p.Balance), 0);
   const totalValue = filtered.reduce((s, p) => s + (Number(p.Balance) > 0 ? Number(p.Balance) * Number(p.CostPrice) : 0), 0);
-
-  function handlePrint() {
-    window.print();
-  }
-
   const thClass = "px-4 py-3 cursor-pointer select-none hover:bg-[#3d5268] transition text-left whitespace-nowrap";
 
   return (
     <>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          body { background: white; margin: 0; }
-          * { font-family: Arial, sans-serif !important; }
-        }
-        .print-only { display: none; }
-      `}</style>
-
-      {/* Print View */}
-      <div className="print-only" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', backgroundColor: '#2D3E50', color: 'white', padding: '12px 16px' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>LAGERRAPPORT</h1>
-            <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#AAC4D8' }}>{new Date().toLocaleDateString('ar-SE')}</p>
-          </div>
+      <style>{`@media print { .no-print { display: none !important; } .print-only { display: block !important; } body { background: white; } } .print-only { display: none; }`}</style>
+      <div className="print-only" style={{ padding: '20px' }}>
+        <div style={{ backgroundColor: '#2D3E50', color: 'white', padding: '12px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>LAGERRAPPORT</h1>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold' }}>إجمالي الكراتين: {totalBoxes}</p>
-            <p style={{ margin: '2px 0 0', fontSize: '13px', fontWeight: 'bold' }}>قيمة المستودع: {totalValue.toFixed(0)} kr</p>
+            <p style={{ margin: 0 }}>إجمالي الكراتين: {totalBoxes}</p>
+            <p style={{ margin: 0 }}>قيمة المستودع: {totalValue.toFixed(0)} kr</p>
           </div>
         </div>
-
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#E8ECEF' }}>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'left' }}>Kod</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'left' }}>Produkt (SE)</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'right' }}>المنتج (AR)</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'center' }}>وارد</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'center' }}>صادر</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'center' }}>مرتجع</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'center' }}>الرصيد</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'center' }}>الحد الأدنى</th>
-              <th style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'right' }}>القيمة (kr)</th>
+          <thead><tr style={{ backgroundColor: '#E8ECEF' }}>
+            {['Kod','Produkt','وارد','صادر','Saldo','Min'].map(h => (
+              <th key={h} style={{ border: '1px solid #ccc', padding: '5px 7px' }}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>{filtered.map((p, i) => (
+            <tr key={p.ProductId} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#F5F7FA' }}>
+              <td style={{ border: '1px solid #ccc', padding: '4px 7px' }}>{p.ProductCode}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 7px' }}>{p.NameSE}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.Incoming}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.Outgoing}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center', fontWeight: 'bold' }}>{p.Balance}</td>
+              <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.MinStock}</td>
             </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p, i) => {
-              const low = Number(p.Balance) < Number(p.MinStock) && Number(p.MinStock) > 0;
-              const val = Number(p.Balance) > 0 ? Number(p.Balance) * Number(p.CostPrice) : 0;
-              return (
-                <tr key={p.ProductId} style={{ backgroundColor: low ? '#FFF3CD' : i % 2 === 0 ? 'white' : '#F5F7FA' }}>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px' }}>{p.ProductCode}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px' }}>{p.NameSE}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'right', direction: 'rtl' }}>{p.NameAR}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.Incoming}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.Outgoing}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.Returned}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center', fontWeight: 'bold' }}>{p.Balance}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>{p.MinStock}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'right' }}>{val.toFixed(0)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr style={{ fontWeight: 'bold', backgroundColor: '#E8ECEF' }}>
-              <td colSpan={6} style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'right' }}>TOTALT:</td>
-              <td style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'center' }}>{totalBoxes}</td>
-              <td style={{ border: '1px solid #ccc', padding: '5px 7px' }}></td>
-              <td style={{ border: '1px solid #ccc', padding: '5px 7px', textAlign: 'right' }}>{totalValue.toFixed(0)}</td>
-            </tr>
-          </tfoot>
+          ))}</tbody>
         </table>
       </div>
 
-      {/* Normal View */}
       <div className="min-h-screen bg-gray-100 no-print">
         <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -174,18 +130,11 @@ export default function Lager() {
             <h1 className="text-xl font-bold">Lager</h1>
           </div>
           <div className="flex gap-2">
-            <button onClick={handlePrint}
-              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
-              🖨️ Rapport
-            </button>
-            <button onClick={() => setShowModal(true)}
-              className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition">
-              + rörelse
-            </button>
+            <button onClick={() => window.print()} className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">🖨️ Rapport</button>
+            <button onClick={() => setShowModal(true)} className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition">+ rörelse</button>
           </div>
         </div>
 
-        {/* ملخص */}
         <div className="bg-[#1a2a3a] text-white px-6 py-2 text-xs flex gap-6">
           <span>📦 {filtered.length} produkter</span>
           <span>Totalt: {totalBoxes} krt</span>
@@ -196,17 +145,14 @@ export default function Lager() {
         </div>
 
         <div className="max-w-6xl mx-auto p-4 space-y-4">
-          {/* فلاتر */}
           <div className="flex gap-3 flex-wrap">
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..."
               className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
             <label className="flex items-center gap-2 text-sm bg-white px-3 py-2 rounded-lg border border-gray-300 cursor-pointer">
-              <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} />
-              I lager
+              <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} /> I lager
             </label>
             <label className="flex items-center gap-2 text-sm bg-white px-3 py-2 rounded-lg border border-gray-300 cursor-pointer">
-              <input type="checkbox" checked={lowStockOnly} onChange={e => setLowStockOnly(e.target.checked)} />
-              Under min
+              <input type="checkbox" checked={lowStockOnly} onChange={e => setLowStockOnly(e.target.checked)} /> Under min
             </label>
           </div>
 
@@ -239,9 +185,8 @@ export default function Lager() {
                           <td className={`px-4 py-3 text-center font-bold ${Number(p.Balance) < 0 ? 'text-red-500' : 'text-gray-800'}`}>{p.Balance}</td>
                           <td className="px-4 py-3 text-center text-gray-500">{p.MinStock}</td>
                           <td className="px-4 py-3 text-center">
-                            {low
-                              ? <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">⚠ lågt</span>
-                              : <span className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full font-medium">✓ ok</span>}
+                            {low ? <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">⚠ lågt</span>
+                                 : <span className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full font-medium">✓ ok</span>}
                           </td>
                         </tr>
                       );
@@ -264,8 +209,9 @@ export default function Lager() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="bg-[#2D3E50] text-white px-6 py-4 rounded-t-2xl">
+            <div className="bg-[#2D3E50] text-white px-6 py-4 rounded-t-2xl flex justify-between items-center">
               <h2 className="font-bold">حركة مخزون جديدة</h2>
+              <button onClick={() => setShowModal(false)} className="text-white/70 hover:text-white text-xl">✕</button>
             </div>
             <div className="p-6 space-y-4">
               <div>

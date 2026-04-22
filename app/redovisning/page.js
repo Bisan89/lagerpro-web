@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Redovisning() {
   const [fromDate, setFromDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10));
@@ -13,11 +14,12 @@ export default function Redovisning() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // overview | expenses
   const router = useRouter();
+  const { user, ready } = useAuth('redovisning');
+  if (!ready) return null;
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    if (!url || !token) { router.push('/'); return; }
     loadData();
   }, []);
 
