@@ -272,9 +272,7 @@ function OrderForm() {
           </tfoot>
         </table>
 
-        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 9px;">
-          LagerPro &nbsp;|&nbsp; ${orderDate}
-        </div>
+
       </div>
     `;
 
