@@ -2,22 +2,16 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-// Toast component
 function Toast({ message, type = 'success', onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000);
-    return () => clearTimeout(t);
-  }, []);
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
   return (
-    <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl text-white text-sm font-bold flex items-center gap-3 transition-all
+    <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl text-white text-sm font-bold flex items-center gap-3
       ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
-      <span>{type === 'error' ? '✕' : '✓'}</span>
-      {message}
+      <span>{type === 'error' ? '✕' : '✓'}</span>{message}
     </div>
   );
 }
 
-// Modal مشترك
 function Modal({ title, onClose, children, footer }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -62,15 +56,10 @@ function OrderForm() {
   const [selProduct, setSelProduct] = useState(null);
   const [boxes, setBoxes] = useState('');
   const [price, setPrice] = useState('');
-  const [printType, setPrintType] = useState('order');
   const [toast, setToast] = useState(null);
-
-  // Modal إضافة عميل
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ Name: '', Company: '', Phone: '', Email: '', Address: '' });
   const [savingCustomer, setSavingCustomer] = useState(false);
-
-  // Modal إضافة منتج
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({ ProductCode: '', NameSE: '', NameAR: '', PiecesPerBox: '', Price: '', Moms: '12' });
   const [savingProduct, setSavingProduct] = useState(false);
@@ -78,9 +67,7 @@ function OrderForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function showToast(msg, type = 'success') {
-    setToast({ msg, type });
-  }
+  function showToast(msg, type = 'success') { setToast({ msg, type }); }
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
@@ -100,18 +87,13 @@ function OrderForm() {
       ).slice(0, 10);
       setFilteredProducts(f);
       setShowProductList(true);
-    } else {
-      setShowProductList(false);
-    }
+    } else { setShowProductList(false); }
   }, [productSearch, products]);
 
   async function q(sql, args = []) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    const res = await fetch('/api/query', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, token, sql, args })
-    });
+    const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
     const data = await res.json();
     return data.rows || [];
   }
@@ -119,20 +101,13 @@ function OrderForm() {
   async function execute(sql, args = []) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
-    await fetch('/api/execute', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, token, sql, args })
-    });
+    await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql, args }) });
   }
 
   async function loadInit(url, token) {
     const [custs, prods] = await Promise.all([
-      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, token, sql: 'SELECT CustomerId, Name, Company, Address, Phone FROM Customers ORDER BY Name' })
-      }).then(r => r.json()).then(d => d.rows || []),
-      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, token, sql: 'SELECT ProductId, ProductCode, NameSE, NameAR, PiecesPerBox, Price FROM Products ORDER BY NameSE' })
-      }).then(r => r.json()).then(d => d.rows || []),
+      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql: 'SELECT CustomerId, Name, Company, Address, Phone FROM Customers ORDER BY Name' }) }).then(r => r.json()).then(d => d.rows || []),
+      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql: 'SELECT ProductId, ProductCode, NameSE, NameAR, PiecesPerBox, Price FROM Products ORDER BY NameSE' }) }).then(r => r.json()).then(d => d.rows || []),
     ]);
     setCustomers(custs);
     setProducts(prods);
@@ -142,21 +117,15 @@ function OrderForm() {
     setLoading(true);
     setOrderId(Number(id));
     const [order, orderItems] = await Promise.all([
-      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, token, sql: 'SELECT * FROM Orders WHERE OrderId=?', args: [id] })
-      }).then(r => r.json()).then(d => d.rows || []),
-      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, token, sql: 'SELECT * FROM OrderItems WHERE OrderId=?', args: [id] })
-      }).then(r => r.json()).then(d => d.rows || []),
+      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql: 'SELECT * FROM Orders WHERE OrderId=?', args: [id] }) }).then(r => r.json()).then(d => d.rows || []),
+      fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql: 'SELECT * FROM OrderItems WHERE OrderId=?', args: [id] }) }).then(r => r.json()).then(d => d.rows || []),
     ]);
     if (order[0]) {
       setCustomerId(String(order[0].CustomerId || ''));
       setOrderDate(order[0].OrderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10));
       setStatus(order[0].Status || 'Pending');
       if (order[0].CustomerId) {
-        const custRows = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, token, sql: 'SELECT * FROM Customers WHERE CustomerId=?', args: [order[0].CustomerId] })
-        }).then(r => r.json()).then(d => d.rows || []);
+        const custRows = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, token, sql: 'SELECT * FROM Customers WHERE CustomerId=?', args: [order[0].CustomerId] }) }).then(r => r.json()).then(d => d.rows || []);
         if (custRows[0]) { setCustomerData(custRows[0]); setCustomerSearch(custRows[0].Name); }
       }
     }
@@ -169,27 +138,22 @@ function OrderForm() {
   }
 
   function selectProduct(p) {
-    setSelProduct(p);
-    setProductSearch(`${p.ProductCode} — ${p.NameAR || p.NameSE}`);
-    setPrice(String(p.Price));
-    setShowProductList(false);
+    setSelProduct(p); setProductSearch(`${p.ProductCode} — ${p.NameAR || p.NameSE}`);
+    setPrice(String(p.Price)); setShowProductList(false);
   }
 
   function selectCustomer(c) {
-    setCustomerId(String(c.CustomerId));
-    setCustomerSearch(c.Name);
-    setCustomerData(c);
-    setShowCustomerList(false);
+    setCustomerId(String(c.CustomerId)); setCustomerSearch(c.Name);
+    setCustomerData(c); setShowCustomerList(false);
   }
 
   function addItem() {
     if (!selProduct || !boxes) { showToast('اختر منتج وأدخل الكراتين', 'error'); return; }
-    const b = Number(boxes);
-    const pr = Number(price);
+    const b = Number(boxes); const pr = Number(price);
     setItems(prev => [...prev, {
       ProductCode: selProduct.ProductCode, NameSE: selProduct.NameSE, NameAR: selProduct.NameAR,
-      Boxes: b, PiecesPerBox: Number(selProduct.PiecesPerBox),
-      Price: pr, RowTotal: b * Number(selProduct.PiecesPerBox) * pr
+      Boxes: b, PiecesPerBox: Number(selProduct.PiecesPerBox), Price: pr,
+      RowTotal: b * Number(selProduct.PiecesPerBox) * pr
     }]);
     setSelProduct(null); setProductSearch(''); setBoxes(''); setPrice('');
   }
@@ -204,12 +168,7 @@ function OrderForm() {
       await execute('INSERT INTO Customers (Name, Company, Phone, Email, Address) VALUES (?,?,?,?,?)',
         [newCustomer.Name, newCustomer.Company, newCustomer.Phone, newCustomer.Email, newCustomer.Address]);
       const rows = await q('SELECT * FROM Customers ORDER BY CustomerId DESC LIMIT 1');
-      if (rows[0]) {
-        setCustomerId(String(rows[0].CustomerId));
-        setCustomerSearch(rows[0].Name);
-        setCustomerData(rows[0]);
-        setCustomers(prev => [...prev, rows[0]]);
-      }
+      if (rows[0]) { setCustomerId(String(rows[0].CustomerId)); setCustomerSearch(rows[0].Name); setCustomerData(rows[0]); setCustomers(prev => [...prev, rows[0]]); }
       setShowAddCustomer(false);
       setNewCustomer({ Name: '', Company: '', Phone: '', Email: '', Address: '' });
       showToast('تم إضافة العميل');
@@ -222,15 +181,9 @@ function OrderForm() {
     setSavingProduct(true);
     try {
       await execute('INSERT INTO Products (ProductCode, NameSE, NameAR, PiecesPerBox, Price, Moms) VALUES (?,?,?,?,?,?)',
-        [newProduct.ProductCode, newProduct.NameSE, newProduct.NameAR,
-         Number(newProduct.PiecesPerBox), Number(newProduct.Price), Number(newProduct.Moms)]);
+        [newProduct.ProductCode, newProduct.NameSE, newProduct.NameAR, Number(newProduct.PiecesPerBox), Number(newProduct.Price), Number(newProduct.Moms)]);
       const rows = await q('SELECT * FROM Products ORDER BY ProductId DESC LIMIT 1');
-      if (rows[0]) {
-        setProducts(prev => [...prev, rows[0]]);
-        setSelProduct(rows[0]);
-        setProductSearch(`${rows[0].ProductCode} — ${rows[0].NameAR || rows[0].NameSE}`);
-        setPrice(String(rows[0].Price));
-      }
+      if (rows[0]) { setProducts(prev => [...prev, rows[0]]); setSelProduct(rows[0]); setProductSearch(`${rows[0].ProductCode} — ${rows[0].NameAR || rows[0].NameSE}`); setPrice(String(rows[0].Price)); }
       setShowAddProduct(false);
       setNewProduct({ ProductCode: '', NameSE: '', NameAR: '', PiecesPerBox: '', Price: '', Moms: '12' });
       showToast('تم إضافة المنتج');
@@ -245,126 +198,100 @@ function OrderForm() {
     try {
       let oid = orderId;
       if (!oid) {
-        await execute('INSERT INTO Orders (CustomerId, OrderDate, Status, OrderType) VALUES (?,?,?,?)',
-          [Number(customerId), orderDate, status, 'Normal']);
+        await execute('INSERT INTO Orders (CustomerId, OrderDate, Status, OrderType) VALUES (?,?,?,?)', [Number(customerId), orderDate, status, 'Normal']);
         const rows = await q('SELECT OrderId FROM Orders ORDER BY OrderId DESC LIMIT 1');
-        oid = rows[0]?.OrderId;
-        setOrderId(oid);
+        oid = rows[0]?.OrderId; setOrderId(oid);
       } else {
-        await execute('UPDATE Orders SET CustomerId=?, OrderDate=?, Status=? WHERE OrderId=?',
-          [Number(customerId), orderDate, status, oid]);
+        await execute('UPDATE Orders SET CustomerId=?, OrderDate=?, Status=? WHERE OrderId=?', [Number(customerId), orderDate, status, oid]);
         await execute('DELETE FROM OrderItems WHERE OrderId=?', [oid]);
       }
-      for (const item of items) {
+      for (const item of items)
         await execute('INSERT INTO OrderItems (OrderId, ProductCode, NameSE, NameAR, Boxes, PiecesPerBox, Price, RowTotal) VALUES (?,?,?,?,?,?,?,?)',
           [oid, item.ProductCode, item.NameSE, item.NameAR, item.Boxes, item.PiecesPerBox, item.Price, item.RowTotal]);
-      }
       showToast('تم الحفظ بنجاح!');
       setTimeout(() => router.push('/orders'), 1200);
     } catch (e) { showToast('خطأ: ' + e.message, 'error'); }
     setSaving(false);
   }
 
-  function handlePrint(type) {
-    setPrintType(type);
-    setTimeout(() => window.print(), 150);
+  async function generatePdf(type) {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    doc.setFont('helvetica');
+
+    // العنوان
+    doc.setFontSize(22); doc.setFont('helvetica', 'bold');
+    doc.text(type === 'foljesedel' ? 'FOLJESEDEL' : 'ORDER', 105, 20, { align: 'center' });
+
+    // معلومات الطلب
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text(`Ordernr: ${orderId || 'NY'}`, 15, 35);
+    doc.text(`Datum: ${orderDate}`, 15, 41);
+    doc.text(customerName || '', 195, 35, { align: 'right' });
+    if (customerData?.Company) doc.text(customerData.Company, 195, 41, { align: 'right' });
+    if (customerData?.Address) doc.text(customerData.Address, 195, 47, { align: 'right' });
+
+    // خط فاصل
+    doc.setDrawColor(45, 62, 80); doc.setLineWidth(0.8);
+    doc.line(15, 53, 195, 53);
+
+    // رؤوس الجدول
+    doc.setFillColor(45, 62, 80); doc.rect(15, 56, 180, 8, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    [['Kod',16],['Produkt SE',35],['Krt',132],['Per krt',145],['Pris/st',163],['Totalt',181]].forEach(([h,x]) => doc.text(h, x, 61.5));
+
+    // صفوف الجدول
+    doc.setTextColor(0,0,0); doc.setFont('helvetica', 'normal');
+    let y = 70;
+    items.forEach((item, idx) => {
+      if (idx % 2 === 0) { doc.setFillColor(249,249,249); doc.rect(15, y-4, 180, 8, 'F'); }
+      doc.setFontSize(8);
+      doc.text(String(item.ProductCode||''), 16, y);
+      doc.text(String(item.NameSE||'').substring(0,30), 35, y);
+      doc.text(String(item.Boxes), 134, y, { align: 'right' });
+      doc.text(String(item.PiecesPerBox), 148, y, { align: 'right' });
+      doc.text(Number(item.Price).toFixed(2), 173, y, { align: 'right' });
+      doc.text(Number(item.RowTotal).toFixed(2), 193, y, { align: 'right' });
+      doc.setDrawColor(220,220,220); doc.line(15, y+3, 195, y+3);
+      y += 8;
+    });
+
+    // الإجمالي
+    doc.setDrawColor(45,62,80); doc.setLineWidth(0.5); doc.line(15, y+1, 195, y+1);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Ordertotal:', 140, y+8);
+    doc.text(`${total.toFixed(2)} kr`, 193, y+8, { align: 'right' });
+
+    // Footer
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text(`LagerPro  |  ${orderDate}`, 105, 287, { align: 'center' });
+
+    doc.save(`${type === 'foljesedel' ? 'Foljesedel' : 'Order'}_${orderId||'NY'}_${customerName||''}.pdf`);
   }
 
-  const filteredCustomers = customers
-    .filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
+  const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
   const statuses = ['Pending', 'Done', 'Levererad', 'Skickad', 'Edited'];
 
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-    const d = new Date(dateStr);
-    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-  }
-
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center text-gray-400">
-      جارٍ التحميل...
-    </div>
-  );
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">جارٍ التحميل...</div>;
 
   return (
     <>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          body { background: white; margin: 0; padding: 0; }
-          * { font-family: Arial, sans-serif !important; }
-        }
-        .print-only { display: none; }
-      `}</style>
-
-      {/* Toast */}
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Print View */}
-      <div className="print-only" style={{ padding: '30px', fontFamily: 'Arial, sans-serif' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 'bold', margin: 0, letterSpacing: '2px' }}>
-            {printType === 'foljesedel' ? 'FÖLJESEDEL' : 'ORDER'}
-          </h1>
-        </div>
-        <div style={{ marginBottom: '20px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <p style={{ margin: '3px 0' }}><strong>Ordernr:</strong> {orderId || 'NY'}</p>
-            <p style={{ margin: '3px 0' }}><strong>Datum:</strong> {formatDate(orderDate)}</p>
-          </div>
-          <div style={{ textAlign: 'right', direction: 'rtl' }}>
-            <p style={{ margin: '3px 0', fontSize: '14px' }}>السيد {customerName} المحترم</p>
-            {customerData?.Company && <p style={{ margin: '3px 0' }}>{customerData.Company}</p>}
-            {customerData?.Address && <p style={{ margin: '3px 0' }}>{customerData.Address}</p>}
-          </div>
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f0f0f0' }}>
-              {['Kod','Produkt (SE)','Produkt (AR)','Krt','Per krt','Pris/st','Totalt'].map(h => (
-                <th key={h} style={{ border: '1px solid #999', padding: '6px 8px', textAlign: h.includes('AR') ? 'right' : h === 'Totalt' || h === 'Pris/st' ? 'right' : 'left' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, i) => (
-              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? 'white' : '#f9f9f9' }}>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px' }}>{item.ProductCode}</td>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px' }}>{item.NameSE}</td>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right', direction: 'rtl' }}>{item.NameAR}</td>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>{item.Boxes}</td>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'center' }}>{item.PiecesPerBox}</td>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{Number(item.Price).toFixed(2)}</td>
-                <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{Number(item.RowTotal).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr style={{ fontWeight: 'bold' }}>
-              <td colSpan={6} style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>Ordertotal:</td>
-              <td style={{ border: '1px solid #ccc', padding: '6px 8px', textAlign: 'right' }}>{total.toFixed(2)} kr</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      {/* Normal View */}
-      <div className="min-h-screen bg-gray-100 no-print">
+      <div className="min-h-screen bg-gray-100">
         <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/orders')} className="text-gray-300 hover:text-white">← رجوع</button>
             <h1 className="text-xl font-bold">{orderId ? `Order #${orderId}` : 'Ny order'}</h1>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => handlePrint('order')}
+            <button onClick={() => generatePdf('order')}
               className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
-              📄 Order
+              📥 Order PDF
             </button>
-            <button onClick={() => handlePrint('foljesedel')}
+            <button onClick={() => generatePdf('foljesedel')}
               className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
-              📋 Följesedel
+              📥 Följesedel PDF
             </button>
             <button onClick={handleSave} disabled={saving}
               className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
@@ -374,7 +301,6 @@ function OrderForm() {
         </div>
 
         <div className="max-w-4xl mx-auto p-4 space-y-4">
-          {/* معلومات الطلب */}
           <div className="bg-white rounded-xl shadow-sm p-5">
             <h2 className="font-bold text-gray-700 mb-4 text-sm">معلومات الطلب</h2>
             <div className="space-y-3">
@@ -383,13 +309,10 @@ function OrderForm() {
                 <div className="flex gap-2">
                   <input type="text" value={customerSearch}
                     onChange={e => { setCustomerSearch(e.target.value); setShowCustomerList(true); setCustomerId(''); setCustomerData(null); }}
-                    onFocus={() => setShowCustomerList(true)}
-                    placeholder="ابحث عن عميل..."
+                    onFocus={() => setShowCustomerList(true)} placeholder="ابحث عن عميل..."
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
                   <button onClick={() => setShowAddCustomer(true)}
-                    className="bg-[#2D3E50] hover:bg-[#3d5268] text-white px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap">
-                    + عميل
-                  </button>
+                    className="bg-[#2D3E50] hover:bg-[#3d5268] text-white px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap">+ عميل</button>
                 </div>
                 {showCustomerList && customerSearch.length > 0 && filteredCustomers.length > 0 && (
                   <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
@@ -420,7 +343,6 @@ function OrderForm() {
             </div>
           </div>
 
-          {/* إضافة منتج */}
           <div className="bg-white rounded-xl shadow-sm p-5">
             <h2 className="font-bold text-gray-700 mb-4 text-sm">إضافة منتج</h2>
             <div className="space-y-3">
@@ -431,9 +353,7 @@ function OrderForm() {
                     placeholder="ابحث بالاسم العربي أو السويدي أو الكود..."
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
                   <button onClick={() => setShowAddProduct(true)}
-                    className="bg-[#2D3E50] hover:bg-[#3d5268] text-white px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap">
-                    + منتج
-                  </button>
+                    className="bg-[#2D3E50] hover:bg-[#3d5268] text-white px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap">+ منتج</button>
                 </div>
                 {showProductList && filteredProducts.length > 0 && (
                   <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
@@ -466,7 +386,6 @@ function OrderForm() {
             </div>
           </div>
 
-          {/* جدول المنتجات */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[550px]">
@@ -514,7 +433,6 @@ function OrderForm() {
         </div>
       </div>
 
-      {/* Modal إضافة عميل */}
       {showAddCustomer && (
         <Modal title="عميل جديد" onClose={() => setShowAddCustomer(false)}
           footer={<>
@@ -525,14 +443,12 @@ function OrderForm() {
             <button onClick={() => setShowAddCustomer(false)}
               className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-200">إلغاء</button>
           </>}>
-          {[{label:'Namn *', key:'Name'},{label:'Företag',key:'Company'},{label:'Telefon',key:'Phone'},{label:'Email',key:'Email'},{label:'Adress',key:'Address'}].map(f => (
-            <Field key={f.key} label={f.label} value={newCustomer[f.key]}
-              onChange={v => setNewCustomer({...newCustomer, [f.key]: v})} />
+          {[{label:'Namn *',key:'Name'},{label:'Företag',key:'Company'},{label:'Telefon',key:'Phone'},{label:'Email',key:'Email'},{label:'Adress',key:'Address'}].map(f => (
+            <Field key={f.key} label={f.label} value={newCustomer[f.key]} onChange={v => setNewCustomer({...newCustomer, [f.key]: v})} />
           ))}
         </Modal>
       )}
 
-      {/* Modal إضافة منتج */}
       {showAddProduct && (
         <Modal title="منتج جديد" onClose={() => setShowAddProduct(false)}
           footer={<>
@@ -543,16 +459,8 @@ function OrderForm() {
             <button onClick={() => setShowAddProduct(false)}
               className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-200">إلغاء</button>
           </>}>
-          {[
-            {label:'Produktkod', key:'ProductCode'},
-            {label:'Namn SE *', key:'NameSE'},
-            {label:'الاسم العربي', key:'NameAR'},
-            {label:'Per kartong', key:'PiecesPerBox', type:'number'},
-            {label:'Pris (kr)', key:'Price', type:'number'},
-            {label:'Moms (%)', key:'Moms', type:'number'},
-          ].map(f => (
-            <Field key={f.key} label={f.label} type={f.type} value={newProduct[f.key]}
-              onChange={v => setNewProduct({...newProduct, [f.key]: v})} />
+          {[{label:'Produktkod',key:'ProductCode'},{label:'Namn SE *',key:'NameSE'},{label:'الاسم العربي',key:'NameAR'},{label:'Per kartong',key:'PiecesPerBox',type:'number'},{label:'Pris (kr)',key:'Price',type:'number'},{label:'Moms (%)',key:'Moms',type:'number'}].map(f => (
+            <Field key={f.key} label={f.label} type={f.type} value={newProduct[f.key]} onChange={v => setNewProduct({...newProduct, [f.key]: v})} />
           ))}
         </Modal>
       )}
