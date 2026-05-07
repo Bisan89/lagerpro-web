@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../hooks/useAuth';
 
 export default function Redovisning() {
   const [fromDate, setFromDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10));
@@ -13,19 +12,45 @@ export default function Redovisning() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // overview | expenses
+  const [ready, setReady] = useState(false);
   const router = useRouter();
-  const { user, ready } = useAuth('redovisning');
 
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('redovisning')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     loadData();
   }, []);
 
   async function q(sql, args = []) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('redovisning')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, token, sql, args }) });
     const data = await res.json();

@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../hooks/useAuth';
 
 export default function Lager() {
   const [stock, setStock] = useState([]);
@@ -15,13 +14,26 @@ export default function Lager() {
   const [sortDir, setSortDir] = useState('asc');
   const [inStockOnly, setInStockOnly] = useState(false);
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
-  const { user, ready } = useAuth('lager');
 
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('lager')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     loadAll(url, token);
   }, []);
 

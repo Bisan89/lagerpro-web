@@ -2,17 +2,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// صلاحيات كل Role
 const PERMISSIONS = {
-  Admin:      ['artiklar', 'order', 'orders', 'kunder', 'lager', 'inkop', 'redovisning'],
-  Lager:      ['artiklar', 'order', 'orders', 'lager', 'inkop'],
-  Forsaljning:['artiklar', 'order', 'orders', 'kunder'],
+  Admin:       ['artiklar', 'order', 'orders', 'kunder', 'lager', 'inkop', 'redovisning'],
+  Lager:       ['artiklar', 'order', 'orders', 'lager', 'inkop'],
+  Forsaljning: ['artiklar', 'order', 'orders', 'kunder'],
 };
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [warehouseName, setWarehouseName] = useState('Lager Pro');
   const [stats, setStats] = useState({ orders: 0, customers: 0, products: 0 });
+  const [ready, setReady] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,6 +24,7 @@ export default function Dashboard() {
     const parsed = JSON.parse(u);
     setUser(parsed);
     if (wname) setWarehouseName(wname);
+    setReady(true);
     loadStats(url, token, parsed.Role);
   }, []);
 
@@ -43,12 +44,11 @@ export default function Dashboard() {
 
   async function loadStats(url, token, role) {
     try {
-      const queries = [
+      const [orders, customers, products] = await Promise.all([
         query(url, token, "SELECT COUNT(*) as c FROM Orders WHERE Status='Pending'"),
         canAccess(role, 'kunder') ? query(url, token, 'SELECT COUNT(*) as c FROM Customers') : Promise.resolve([{c:0}]),
         query(url, token, 'SELECT COUNT(*) as c FROM Products'),
-      ];
-      const [orders, customers, products] = await Promise.all(queries);
+      ]);
       setStats({
         orders: orders[0]?.c || 0,
         customers: customers[0]?.c || 0,
@@ -62,11 +62,6 @@ export default function Dashboard() {
     router.push('/');
   }
 
-  function navigate(href, page) {
-    if (!canAccess(user?.Role, page)) return;
-    router.push(href);
-  }
-
   const allNavItems = [
     { label: 'Artiklar',      icon: '📦', href: '/artiklar',    page: 'artiklar' },
     { label: 'Skapa order',   icon: '➕', href: '/order',       page: 'order' },
@@ -78,9 +73,7 @@ export default function Dashboard() {
   ];
 
   const navItems = allNavItems.filter(item => canAccess(user?.Role, item.page));
-
   const roleLabel = { Admin: 'Admin', Lager: 'Lager', Forsaljning: 'Försäljning' };
-
 
   if (!ready) return null;
 
@@ -101,17 +94,15 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-5xl mx-auto p-6 space-y-6">
-
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
-          <button onClick={() => navigate('/orders', 'orders')}
+          <button onClick={() => router.push('/orders')}
             className="bg-white rounded-xl p-5 shadow-sm text-center hover:shadow-md hover:bg-[#2D3E50] hover:text-white transition group">
             <p className="text-3xl font-bold text-[#2D3E50] group-hover:text-white">{stats.orders}</p>
             <p className="text-gray-500 text-sm mt-1 group-hover:text-gray-200">طلبات Pending</p>
           </button>
 
           {canAccess(user?.Role, 'kunder') ? (
-            <button onClick={() => navigate('/kunder', 'kunder')}
+            <button onClick={() => router.push('/kunder')}
               className="bg-white rounded-xl p-5 shadow-sm text-center hover:shadow-md hover:bg-[#2D3E50] hover:text-white transition group">
               <p className="text-3xl font-bold text-[#2D3E50] group-hover:text-white">{stats.customers}</p>
               <p className="text-gray-500 text-sm mt-1 group-hover:text-gray-200">عملاء</p>
@@ -123,14 +114,13 @@ export default function Dashboard() {
             </div>
           )}
 
-          <button onClick={() => navigate('/artiklar', 'artiklar')}
+          <button onClick={() => router.push('/artiklar')}
             className="bg-white rounded-xl p-5 shadow-sm text-center hover:shadow-md hover:bg-[#2D3E50] hover:text-white transition group">
             <p className="text-3xl font-bold text-[#2D3E50] group-hover:text-white">{stats.products}</p>
             <p className="text-gray-500 text-sm mt-1 group-hover:text-gray-200">منتجات</p>
           </button>
         </div>
 
-        {/* Navigation */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {navItems.map(item => (
             <button key={item.href} onClick={() => router.push(item.href)}
@@ -140,7 +130,6 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-
       </div>
     </div>
   );

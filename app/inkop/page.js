@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../hooks/useAuth';
 
 function Toast({ message, type = 'success', onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
@@ -37,8 +36,8 @@ export default function Inkop() {
   const [sortDir, setSortDir] = useState('desc');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [toast, setToast] = useState(null);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
-  const { user, ready } = useAuth('inkop');
 
 
   function showToast(msg, type = 'success') { setToast({ msg, type }); }
@@ -46,12 +45,38 @@ export default function Inkop() {
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('inkop')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     loadAll(url, token);
   }, []);
 
   async function exe(sql, args = []) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('inkop')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, token, sql, args }) });
   }
@@ -59,6 +84,19 @@ export default function Inkop() {
   async function q(sql, args = []) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('inkop')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, token, sql, args }) });
     const data = await res.json();
@@ -156,6 +194,19 @@ export default function Inkop() {
     await exe('DELETE FROM PurchaseInvoices WHERE InvoiceId=?', [inv.InvoiceId]);
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
+    if (!url || !token) { router.push('/'); return; }
+    const u = sessionStorage.getItem('user');
+    if (u) {
+      const parsed = JSON.parse(u);
+      const PERMISSIONS = {
+        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
+        Lager: ['artiklar','order','orders','lager','inkop'],
+        Forsaljning: ['artiklar','order','orders','kunder'],
+      };
+      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
+      if (!allowed.includes('inkop')) { router.push('/dashboard'); return; }
+    }
+    setReady(true);
     await loadAll(url, token);
     showToast('تم الحذف');
   }
