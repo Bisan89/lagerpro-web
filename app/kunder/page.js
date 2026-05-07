@@ -219,6 +219,75 @@ export default function Kunder() {
   const thClass = "px-4 py-3 cursor-pointer select-none hover:bg-[#3d5268] transition text-left whitespace-nowrap";
   const orderTotal = customerOrders.reduce((s, o) => s + Number(o.Total), 0);
 
+  // عرض طلبيات العميل كصفحة كاملة
+  if (selectedCustomer) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+        <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedCustomer(null)} className="text-gray-300 hover:text-white font-bold text-lg">← رجوع</button>
+            <div>
+              <h1 className="text-xl font-bold">{selectedCustomer.Name}</h1>
+              {selectedCustomer.Company && <p className="text-gray-300 text-xs">{selectedCustomer.Company}</p>}
+            </div>
+          </div>
+          {selectedCustomer.Address && <span className="text-gray-300 text-sm hidden sm:block">{selectedCustomer.Address}</span>}
+        </div>
+        <div className="max-w-3xl mx-auto p-4 space-y-3">
+          {selectedCustomer.Phone && <p className="text-sm text-gray-500">📞 {selectedCustomer.Phone}</p>}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-[#2D3E50] text-white px-4 py-3 flex justify-between items-center">
+              <h3 className="font-bold text-sm">الطلبيات</h3>
+              <span className="text-xs text-gray-300">{customerOrders.length} order</span>
+            </div>
+            {loadingOrders ? (
+              <div className="text-center py-10 text-gray-400">جارٍ التحميل...</div>
+            ) : customerOrders.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">لا توجد طلبيات</div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[400px]">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-gray-600 font-semibold">#</th>
+                        <th className="px-4 py-3 text-left text-gray-600 font-semibold">Datum</th>
+                        <th className="px-4 py-3 text-left text-gray-600 font-semibold">Status</th>
+                        <th className="px-4 py-3 text-right text-gray-600 font-semibold">Totalt (kr)</th>
+                        <th className="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customerOrders.map((o, i) => (
+                        <tr key={o.OrderId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-3 font-mono text-gray-500">#{o.OrderId}</td>
+                          <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{o.OrderDate?.slice(0, 10)}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(o.Status)}`}>{o.Status}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold">{Number(o.Total).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <button onClick={() => router.push(`/order?id=${o.OrderId}`)}
+                              className="text-blue-500 hover:text-blue-700 text-xs font-medium">فتح</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-3 bg-gray-50 border-t flex justify-between items-center">
+                  <span className="text-xs text-gray-500">{customerOrders.length} طلبية</span>
+                  <span className="font-bold text-[#2D3E50]">{orderTotal.toFixed(2)} kr</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
@@ -272,70 +341,7 @@ export default function Kunder() {
         )}
       </div>
 
-      {/* Modal طلبيات العميل */}
-      {selectedCustomer && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-            {/* Header */}
-            <div className="bg-[#2D3E50] text-white px-6 py-4 rounded-t-2xl flex justify-between items-start">
-              <div>
-                <h2 className="font-bold text-lg">{selectedCustomer.Name}</h2>
-                {selectedCustomer.Company && <p className="text-gray-300 text-sm">{selectedCustomer.Company}</p>}
-                {selectedCustomer.Address && <p className="text-gray-300 text-sm">{selectedCustomer.Address}</p>}
-                {selectedCustomer.Phone && <p className="text-gray-300 text-sm">📞 {selectedCustomer.Phone}</p>}
-              </div>
-              <button onClick={() => setSelectedCustomer(null)} className="text-white/70 hover:text-white text-2xl font-bold">✕</button>
-            </div>
 
-            {/* الطلبيات */}
-            <div className="flex-1 overflow-y-auto">
-              {loadingOrders ? (
-                <div className="text-center py-12 text-gray-400">جارٍ التحميل...</div>
-              ) : customerOrders.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">لا توجد طلبيات</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-gray-600 font-semibold">#</th>
-                      <th className="px-4 py-3 text-left text-gray-600 font-semibold">Datum</th>
-                      <th className="px-4 py-3 text-left text-gray-600 font-semibold">Status</th>
-                      <th className="px-4 py-3 text-right text-gray-600 font-semibold">Totalt (kr)</th>
-                      <th className="px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customerOrders.map((o, i) => (
-                      <tr key={o.OrderId} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-4 py-3 font-mono text-gray-500">#{o.OrderId}</td>
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{o.OrderDate?.slice(0, 10)}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(o.Status)}`}>
-                            {o.Status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold">{Number(o.Total).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button onClick={() => router.push(`/order?id=${o.OrderId}`)}
-                            className="text-blue-500 hover:text-blue-700 text-xs font-medium">
-                            فتح
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-2xl flex justify-between items-center">
-              <span className="text-sm text-gray-500">{customerOrders.length} طلبية</span>
-              <span className="font-bold text-[#2D3E50]">{orderTotal.toFixed(2)} kr</span>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal */}
       {showModal && (
