@@ -254,7 +254,7 @@ function OrderForm() {
           </thead>
           <tbody>
             ${items.map((item, i) => `
-              <tr style="background-color: ${i % 2 === 0 ? 'white' : '#f9f9f9'};">
+              <tr style="background-color: ${i % 2 === 0 ? 'white' : '#f9f9f9'}; page-break-inside: avoid;">
                 <td style="padding: 5px 8px; border: 1px solid #ddd;">${item.ProductCode||''}</td>
                 <td style="padding: 5px 8px; border: 1px solid #ddd;">${item.NameSE||''}</td>
                 <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; direction: rtl;">${item.NameAR||''}</td>
