@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const PERMISSIONS = {
-  Admin:       ['artiklar', 'order', 'orders', 'kunder', 'lager', 'inkop', 'redovisning'],
+  Admin:       ['artiklar', 'order', 'orders', 'kunder', 'lager', 'inkop', 'redovisning', 'users'],
   Lager:       ['artiklar', 'order', 'orders', 'lager', 'inkop'],
   Forsaljning: ['artiklar', 'order', 'orders', 'kunder'],
 };
@@ -70,6 +70,7 @@ export default function Dashboard() {
     { label: 'Lager',         icon: '🏭', href: '/lager',       page: 'lager' },
     { label: 'Inköp',         icon: '🛒', href: '/inkop',       page: 'inkop' },
     { label: 'Redovisning',   icon: '📊', href: '/redovisning', page: 'redovisning' },
+    { label: 'Användare',     icon: '👤', href: '/users',       page: 'users' },
   ];
 
   const navItems = allNavItems.filter(item => canAccess(user?.Role, item.page));
