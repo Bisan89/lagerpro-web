@@ -217,75 +217,73 @@ function OrderForm() {
   async function generatePdf(type) {
     const html2pdf = (await import('html2pdf.js')).default;
     const title = type === 'foljesedel' ? 'FÖLJESEDEL' : 'ORDER';
-    const filename = `${type === 'foljesedel' ? 'Foljesedel' : 'Order'}_${orderId||'NY'}.pdf`;
-
-    const rows = items.map((item, i) => `
-      <tr style="background-color: ${i % 2 === 0 ? 'white' : '#f9f9f9'};">
-        <td style="padding: 5px 6px; border: 1px solid #ddd;">${item.ProductCode||''}</td>
-        <td style="padding: 5px 6px; border: 1px solid #ddd;">${item.NameSE||''}</td>
-        <td style="padding: 5px 6px; border: 1px solid #ddd; text-align: right; direction: rtl; font-family: Arial, sans-serif;">${item.NameAR||''}</td>
-        <td style="padding: 5px 6px; border: 1px solid #ddd; text-align: center;">${item.Boxes}</td>
-        <td style="padding: 5px 6px; border: 1px solid #ddd; text-align: center;">${item.PiecesPerBox}</td>
-        <td style="padding: 5px 6px; border: 1px solid #ddd; text-align: right;">${Number(item.Price).toFixed(2)}</td>
-        <td style="padding: 5px 6px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${Number(item.RowTotal).toFixed(2)}</td>
-      </tr>
-    `).join('');
+    const filename = `${type === 'foljesedel' ? 'Foljesedel' : 'Order'}_${orderId||'NY'}_${customerName||''}.pdf`;
 
     const html = `
-      <div style="font-family: Arial, sans-serif; padding: 16px; font-size: 10px;">
+      <div style="font-family: Arial, sans-serif; padding: 20px; font-size: 11px; direction: ltr;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="font-size: 22px; font-weight: bold; letter-spacing: 3px; margin: 0;">${title}</h1>
+        </div>
 
-        <h1 style="text-align: center; font-size: 22px; font-weight: bold; letter-spacing: 3px; margin: 0 0 16px 0;">${title}</h1>
-
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
           <div>
             <p style="margin: 3px 0;"><strong>Ordernr:</strong> ${orderId || 'NY'}</p>
             <p style="margin: 3px 0;"><strong>Datum:</strong> ${orderDate}</p>
           </div>
-          <div style="text-align: right;">
-            ${customerData?.Company
-              ? `<p style="margin: 3px 0; font-weight: bold; font-size: 12px;">${customerData.Company}</p>`
-              : `<p style="margin: 3px 0; font-weight: bold; font-size: 12px; direction: rtl;">${customerName||''}</p>`
-            }
-            ${customerData?.Address ? `<p style="margin: 3px 0; color: #555;">${customerData.Address}</p>` : ''}
+          <div style="text-align: right; direction: rtl;">
+            <p style="margin: 3px 0; font-size: 13px;">السيد ${customerName} المحترم</p>
+            ${customerData?.Company ? `<p style="margin: 3px 0;">${customerData.Company}</p>` : ''}
+            ${customerData?.Address ? `<p style="margin: 3px 0;">${customerData.Address}</p>` : ''}
           </div>
         </div>
 
-        <hr style="border: 2px solid #2D3E50; margin-bottom: 10px;" />
+        <hr style="border: 2px solid #2D3E50; margin-bottom: 12px;" />
 
-        <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <thead>
             <tr style="background-color: #2D3E50; color: white;">
-              <th style="padding: 6px; text-align: left; border: 1px solid #1a2a3a;">Kod</th>
-              <th style="padding: 6px; text-align: left; border: 1px solid #1a2a3a;">Produkt (SE)</th>
-              <th style="padding: 6px; text-align: right; border: 1px solid #1a2a3a;">المنتج (AR)</th>
-              <th style="padding: 6px; text-align: center; border: 1px solid #1a2a3a;">Krt</th>
-              <th style="padding: 6px; text-align: center; border: 1px solid #1a2a3a;">Per krt</th>
-              <th style="padding: 6px; text-align: right; border: 1px solid #1a2a3a;">Pris/st</th>
-              <th style="padding: 6px; text-align: right; border: 1px solid #1a2a3a;">Totalt</th>
+              <th style="padding: 6px 8px; text-align: left; border: 1px solid #1a2a3a;">Kod</th>
+              <th style="padding: 6px 8px; text-align: left; border: 1px solid #1a2a3a;">Produkt (SE)</th>
+              <th style="padding: 6px 8px; text-align: right; border: 1px solid #1a2a3a; direction: rtl;">المنتج (AR)</th>
+              <th style="padding: 6px 8px; text-align: center; border: 1px solid #1a2a3a;">Krt</th>
+              <th style="padding: 6px 8px; text-align: center; border: 1px solid #1a2a3a;">Per krt</th>
+              <th style="padding: 6px 8px; text-align: right; border: 1px solid #1a2a3a;">Pris/st</th>
+              <th style="padding: 6px 8px; text-align: right; border: 1px solid #1a2a3a;">Totalt</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>
+            ${items.map((item, i) => `
+              <tr style="background-color: ${i % 2 === 0 ? 'white' : '#f9f9f9'};">
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${item.ProductCode||''}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${item.NameSE||''}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; direction: rtl;">${item.NameAR||''}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: center;">${item.Boxes}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: center;">${item.PiecesPerBox}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${Number(item.Price).toFixed(2)}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${Number(item.RowTotal).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
           <tfoot>
-            <tr style="background-color: #2D3E50; color: white; font-weight: bold;">
-              <td colspan="6" style="padding: 7px 6px; text-align: right; font-size: 11px;">Ordertotal:</td>
-              <td style="padding: 7px 6px; text-align: right; font-size: 13px;">${total.toFixed(2)} kr</td>
+            <tr style="font-weight: bold; background-color: #f0f0f0;">
+              <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; text-align: right;">Ordertotal:</td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd; text-align: right;">${total.toFixed(2)} kr</td>
             </tr>
           </tfoot>
         </table>
 
-        <div style="text-align: center; margin-top: 20px; color: #999; font-size: 8px;">
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 9px;">
           LagerPro &nbsp;|&nbsp; ${orderDate}
         </div>
       </div>
     `;
 
     const opt = {
-      margin: [8, 8, 8, 8],
+      margin: 10,
       filename,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(html).save();
