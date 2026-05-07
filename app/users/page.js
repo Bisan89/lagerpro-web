@@ -16,7 +16,7 @@ function Toast({ message, type = 'success', onClose }) {
 function hashPin(pin) {
   // SHA-256 مثل البرنامج
   const msgBuffer = new TextEncoder().encode(pin);
-  return crypto.subtle.digest('1234', msgBuffer).then(hashBuffer => {
+  return crypto.subtle.digest('SHA-256', msgBuffer).then(hashBuffer => {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   });
