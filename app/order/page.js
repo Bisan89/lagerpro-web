@@ -215,58 +215,83 @@ function OrderForm() {
   }
 
   async function generatePdf(type) {
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    doc.setFont('helvetica');
+    const html2pdf = (await import('html2pdf.js')).default;
 
-    // العنوان
-    doc.setFontSize(22); doc.setFont('helvetica', 'bold');
-    doc.text(type === 'foljesedel' ? 'FOLJESEDEL' : 'ORDER', 105, 20, { align: 'center' });
+    const title = type === 'foljesedel' ? 'FÖLJESEDEL' : 'ORDER';
+    const filename = `${type === 'foljesedel' ? 'Foljesedel' : 'Order'}_${orderId||'NY'}_${customerName||''}.pdf`;
 
-    // معلومات الطلب
-    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-    doc.text(`Ordernr: ${orderId || 'NY'}`, 15, 35);
-    doc.text(`Datum: ${orderDate}`, 15, 41);
-    doc.text(customerName || '', 195, 35, { align: 'right' });
-    if (customerData?.Company) doc.text(customerData.Company, 195, 41, { align: 'right' });
-    if (customerData?.Address) doc.text(customerData.Address, 195, 47, { align: 'right' });
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; font-size: 11px; direction: ltr;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="font-size: 22px; font-weight: bold; letter-spacing: 3px; margin: 0;">${title}</h1>
+        </div>
 
-    // خط فاصل
-    doc.setDrawColor(45, 62, 80); doc.setLineWidth(0.8);
-    doc.line(15, 53, 195, 53);
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <p style="margin: 3px 0;"><strong>Ordernr:</strong> ${orderId || 'NY'}</p>
+            <p style="margin: 3px 0;"><strong>Datum:</strong> ${orderDate}</p>
+          </div>
+          <div style="text-align: right;">
+            ${customerData?.Company ? `<p style="margin: 3px 0; font-weight: bold; font-size: 13px;">${customerData.Company}</p>` : `<p style="margin: 3px 0; font-weight: bold; font-size: 13px;">${customerName||''}</p>`}
+            ${customerData?.Address ? `<p style="margin: 3px 0; color: #555;">${customerData.Address}</p>` : ''}
+          </div>
+        </div>
 
-    // رؤوس الجدول
-    doc.setFillColor(45, 62, 80); doc.rect(15, 56, 180, 8, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-    [['Kod',16],['Produkt SE',35],['Krt',132],['Per krt',145],['Pris/st',163],['Totalt',181]].forEach(([h,x]) => doc.text(h, x, 61.5));
+        <hr style="border: 2px solid #2D3E50; margin-bottom: 12px;" />
 
-    // صفوف الجدول
-    doc.setTextColor(0,0,0); doc.setFont('helvetica', 'normal');
-    let y = 70;
-    items.forEach((item, idx) => {
-      if (idx % 2 === 0) { doc.setFillColor(249,249,249); doc.rect(15, y-4, 180, 8, 'F'); }
-      doc.setFontSize(8);
-      doc.text(String(item.ProductCode||''), 16, y);
-      doc.text(String(item.NameSE||'').substring(0,30), 35, y);
-      doc.text(String(item.Boxes), 134, y, { align: 'right' });
-      doc.text(String(item.PiecesPerBox), 148, y, { align: 'right' });
-      doc.text(Number(item.Price).toFixed(2), 173, y, { align: 'right' });
-      doc.text(Number(item.RowTotal).toFixed(2), 193, y, { align: 'right' });
-      doc.setDrawColor(220,220,220); doc.line(15, y+3, 195, y+3);
-      y += 8;
-    });
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+          <thead>
+            <tr style="background-color: #2D3E50; color: white;">
+              <th style="padding: 6px 8px; text-align: left; border: 1px solid #1a2a3a;">Kod</th>
+              <th style="padding: 6px 8px; text-align: left; border: 1px solid #1a2a3a;">Produkt (SE)</th>
+              <th style="padding: 6px 8px; text-align: right; border: 1px solid #1a2a3a; direction: rtl;">المنتج (AR)</th>
+              <th style="padding: 6px 8px; text-align: center; border: 1px solid #1a2a3a;">Krt</th>
+              <th style="padding: 6px 8px; text-align: center; border: 1px solid #1a2a3a;">Per krt</th>
+              <th style="padding: 6px 8px; text-align: right; border: 1px solid #1a2a3a;">Pris/st</th>
+              <th style="padding: 6px 8px; text-align: right; border: 1px solid #1a2a3a;">Totalt</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((item, i) => `
+              <tr style="background-color: ${i % 2 === 0 ? 'white' : '#f9f9f9'};">
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${item.ProductCode||''}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${item.NameSE||''}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; direction: rtl;">${item.NameAR||''}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: center;">${item.Boxes}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: center;">${item.PiecesPerBox}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${Number(item.Price).toFixed(2)}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${Number(item.RowTotal).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="font-weight: bold; background-color: #f0f0f0;">
+              <td style="padding: 6px 8px; border: 1px solid #ddd;"></td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd;"></td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd;"></td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd;"></td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd; text-align: right; font-size: 12px;">Ordertotal:</td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd;"></td>
+              <td style="padding: 6px 8px; border: 1px solid #ddd; text-align: right; font-size: 13px;">${total.toFixed(2)} kr</td>
+            </tr>
+          </tfoot>
+        </table>
 
-    // الإجمالي
-    doc.setDrawColor(45,62,80); doc.setLineWidth(0.5); doc.line(15, y+1, 195, y+1);
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Ordertotal:', 140, y+8);
-    doc.text(`${total.toFixed(2)} kr`, 193, y+8, { align: 'right' });
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 9px;">
+          LagerPro &nbsp;|&nbsp; ${orderDate}
+        </div>
+      </div>
+    `;
 
-    // Footer
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,150,150);
-    doc.text(`LagerPro  |  ${orderDate}`, 105, 287, { align: 'center' });
+    const opt = {
+      margin: 10,
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
 
-    doc.save(`${type === 'foljesedel' ? 'Foljesedel' : 'Order'}_${orderId||'NY'}_${customerName||''}.pdf`);
+    html2pdf().set(opt).from(html).save();
   }
 
   const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
