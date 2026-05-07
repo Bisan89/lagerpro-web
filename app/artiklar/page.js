@@ -15,7 +15,7 @@ export default function Artiklar() {
   const [sortDir, setSortDir] = useState('asc');
   const router = useRouter();
   const { user, ready } = useAuth('artiklar');
-  if (!ready) return null;
+
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
@@ -98,6 +98,9 @@ export default function Artiklar() {
     });
 
   const thClass = "px-4 py-3 cursor-pointer select-none hover:bg-[#3d5268] transition text-left whitespace-nowrap";
+
+
+  if (!ready) return null;
 
   return (
     <div className="min-h-screen bg-gray-100">

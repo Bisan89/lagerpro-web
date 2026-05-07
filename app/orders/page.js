@@ -5,6 +5,9 @@ import { useAuth } from '../hooks/useAuth';
 
 function Toast({ message, type = 'success', onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
+
+  if (!ready) return null;
+
   return (
     <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl text-white text-sm font-bold flex items-center gap-3
       ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
@@ -35,7 +38,7 @@ export default function Orders() {
   const [delivering, setDelivering] = useState(null);
   const router = useRouter();
   const { user, ready } = useAuth('orders');
-  if (!ready) return null;
+
 
   function showToast(msg, type = 'success') { setToast({ msg, type }); }
 

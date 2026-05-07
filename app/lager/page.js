@@ -17,7 +17,7 @@ export default function Lager() {
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const router = useRouter();
   const { user, ready } = useAuth('lager');
-  if (!ready) return null;
+
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
@@ -92,6 +92,9 @@ export default function Lager() {
   const totalBoxes = filtered.reduce((s, p) => s + Number(p.Balance), 0);
   const totalValue = filtered.reduce((s, p) => s + (Number(p.Balance) > 0 ? Number(p.Balance) * Number(p.CostPrice) : 0), 0);
   const thClass = "px-4 py-3 cursor-pointer select-none hover:bg-[#3d5268] transition text-left whitespace-nowrap";
+
+
+  if (!ready) return null;
 
   return (
     <>

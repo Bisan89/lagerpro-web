@@ -15,7 +15,7 @@ export default function Redovisning() {
   const [activeTab, setActiveTab] = useState('overview'); // overview | expenses
   const router = useRouter();
   const { user, ready } = useAuth('redovisning');
-  if (!ready) return null;
+
 
   useEffect(() => {
     const url = sessionStorage.getItem('turso_url');
@@ -100,6 +100,9 @@ export default function Redovisning() {
   }
 
   const maxRevenue = Math.max(...monthly.map(m => Number(m.Revenue)), 1);
+
+
+  if (!ready) return null;
 
   return (
     <div className="min-h-screen bg-gray-100">

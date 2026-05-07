@@ -1,4 +1,4 @@
-// hooks/useAuth.js
+'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -18,7 +18,10 @@ export function useAuth(page) {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
 
-    if (!u || !url || !token) { router.push('/'); return; }
+    if (!u || !url || !token) {
+      router.push('/');
+      return;
+    }
 
     const parsed = JSON.parse(u);
     const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];

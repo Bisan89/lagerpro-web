@@ -81,6 +81,9 @@ export default function Dashboard() {
 
   const roleLabel = { Admin: 'Admin', Lager: 'Lager', Forsaljning: 'Försäljning' };
 
+
+  if (!ready) return null;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-[#2D3E50] text-white px-6 py-4 flex items-center justify-between">
