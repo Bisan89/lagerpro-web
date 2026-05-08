@@ -157,7 +157,11 @@ export default function Orders() {
       // 1. غيّر حالة الطلبية
       await exe('UPDATE Orders SET Status=?, DeliveryDate=? WHERE OrderId=?',
         ['Levererad', today, o.OrderId]);
-
+// أشعر الويندوز بالتسليم فوراً
+await exe(
+  "INSERT INTO SyncTrigger (TriggerTime, TriggerType, DeviceSource) VALUES (?,?,?)",
+  [today, 'DELIVER', 'WEB']
+);
       // 2. جيب عناصر الطلبية مع ProductId من Products لو ما كان محفوظ
       const url = sessionStorage.getItem('turso_url');
       const token = sessionStorage.getItem('turso_token');
