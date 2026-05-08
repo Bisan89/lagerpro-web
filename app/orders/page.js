@@ -120,6 +120,54 @@ export default function Orders() {
     setLoading(false);
   }
 
+  async function fixStockMovements() {
+    if (!confirm('رح يتم فحص كل الطلبيات المسلّمة وإضافة حركات المخزون الناقصة. متابعة؟')) return;
+    const url = sessionStorage.getItem('turso_url');
+    const token = sessionStorage.getItem('turso_token');
+    let fixed = 0;
+
+    try {
+      // جيب كل الطلبيات المسلّمة
+      const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, token,
+          sql: "SELECT OrderId, OrderDate FROM Orders WHERE Status IN ('Levererad','Done') AND OrderType='Normal'" }) });
+      const data = await res.json();
+      const delivered = data.rows || [];
+
+      for (const order of delivered) {
+        // جيب عناصر الطلبية
+        const itemsRes = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, token,
+            sql: 'SELECT ProductId, Boxes FROM OrderItems WHERE OrderId=? AND ProductId IS NOT NULL',
+            args: [order.OrderId] }) });
+        const itemsData = await itemsRes.json();
+        const items = itemsData.rows || [];
+
+        for (const item of items) {
+          if (!item.ProductId || Number(item.Boxes) <= 0) continue;
+
+          // تحقق ما في OUT movement لهذه الطلبية
+          const checkRes = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, token,
+              sql: "SELECT COUNT(*) as c FROM StockMovements WHERE OrderId=? AND ProductId=? AND MovementType='OUT'",
+              args: [order.OrderId, item.ProductId] }) });
+          const checkData = await checkRes.json();
+          if (Number(checkData.rows?.[0]?.c) > 0) continue;
+
+          // أضف OUT movement
+          await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, token,
+              sql: "INSERT INTO StockMovements (ProductId, MovementType, Boxes, MovementDate, Note, OrderId) VALUES (?,?,?,?,?,?)",
+              args: [item.ProductId, 'OUT', item.Boxes,
+                order.OrderDate?.slice(0,10) || new Date().toISOString().slice(0,10),
+                `Order #${order.OrderId}`, order.OrderId] }) });
+          fixed++;
+        }
+      }
+      showToast(`تم تصحيح ${fixed} حركة مخزون ✔`);
+    } catch (e) { showToast('خطأ: ' + e.message, 'error'); }
+  }
+
   async function handleDeliver(o) {
     if (!confirm(`تأكيد تسليم الطلب #${o.OrderId} للعميل ${o.CustomerName}؟`)) return;
     setDelivering(o.OrderId);
@@ -239,10 +287,16 @@ export default function Orders() {
           <button onClick={() => router.push('/dashboard')} className="text-gray-300 hover:text-white">← رجوع</button>
           <h1 className="text-xl font-bold">Sparade order</h1>
         </div>
-        <button onClick={() => router.push('/order')}
-          className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
-          + ny order
-        </button>
+        <div className="flex gap-2">
+          <button onClick={fixStockMovements}
+            className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-2 rounded-lg transition font-bold">
+            🔧 تصحيح المخزون
+          </button>
+          <button onClick={() => router.push('/order')}
+            className="bg-green-500 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition font-bold">
+            + ny order
+          </button>
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">
