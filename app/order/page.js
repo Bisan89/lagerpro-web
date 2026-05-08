@@ -130,7 +130,9 @@ function OrderForm() {
         if (custRows[0]) { setCustomerData(custRows[0]); setCustomerSearch(custRows[0].Name); }
       }
     }
+    // ✅ احفظ ProductId عند تحميل الطلبية
     setItems(orderItems.map(i => ({
+      ProductId: i.ProductId || null,
       ProductCode: i.ProductCode, NameSE: i.NameSE, NameAR: i.NameAR,
       Boxes: Number(i.Boxes), PiecesPerBox: Number(i.PiecesPerBox),
       Price: Number(i.Price), RowTotal: Number(i.RowTotal)
@@ -151,7 +153,9 @@ function OrderForm() {
   function addItem() {
     if (!selProduct || !boxes) { showToast('اختر منتج وأدخل الكراتين', 'error'); return; }
     const b = Number(boxes); const pr = Number(price);
+    // ✅ احفظ ProductId في الـ item
     setItems(prev => [...prev, {
+      ProductId: selProduct.ProductId || null,
       ProductCode: selProduct.ProductCode, NameSE: selProduct.NameSE, NameAR: selProduct.NameAR,
       Boxes: b, PiecesPerBox: Number(selProduct.PiecesPerBox), Price: pr,
       RowTotal: b * Number(selProduct.PiecesPerBox) * pr
@@ -206,9 +210,10 @@ function OrderForm() {
         await execute('UPDATE Orders SET CustomerId=?, OrderDate=?, Status=? WHERE OrderId=?', [Number(customerId), orderDate, status, oid]);
         await execute('DELETE FROM OrderItems WHERE OrderId=?', [oid]);
       }
+      // ✅ احفظ ProductId في قاعدة البيانات
       for (const item of items)
-        await execute('INSERT INTO OrderItems (OrderId, ProductCode, NameSE, NameAR, Boxes, PiecesPerBox, Price, RowTotal) VALUES (?,?,?,?,?,?,?,?)',
-          [oid, item.ProductCode, item.NameSE, item.NameAR, item.Boxes, item.PiecesPerBox, item.Price, item.RowTotal]);
+        await execute('INSERT INTO OrderItems (OrderId, ProductCode, NameSE, NameAR, Boxes, PiecesPerBox, Price, RowTotal, ProductId) VALUES (?,?,?,?,?,?,?,?,?)',
+          [oid, item.ProductCode, item.NameSE, item.NameAR, item.Boxes, item.PiecesPerBox, item.Price, item.RowTotal, item.ProductId || null]);
       showToast('تم الحفظ بنجاح!');
       setTimeout(() => router.push('/orders'), 1200);
     } catch (e) { showToast('خطأ: ' + e.message, 'error'); }
@@ -225,7 +230,6 @@ function OrderForm() {
         <div style="text-align: center; margin-bottom: 20px;">
           <h1 style="font-size: 22px; font-weight: bold; letter-spacing: 3px; margin: 0;">${title}</h1>
         </div>
-
         <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
           <div>
             <p style="margin: 3px 0;"><strong>Ordernr:</strong> ${orderId || 'NY'}</p>
@@ -237,9 +241,7 @@ function OrderForm() {
             ${customerData?.Address ? `<p style="margin: 3px 0;">${customerData.Address}</p>` : ''}
           </div>
         </div>
-
         <hr style="border: 2px solid #2D3E50; margin-bottom: 12px;" />
-
         <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <thead>
             <tr style="background-color: #2D3E50; color: white;">
@@ -272,21 +274,18 @@ function OrderForm() {
             </tr>
           </tfoot>
         </table>
-
-
       </div>
     `;
 
     const opt = {
-      margin: 10,
-      filename,
+      margin: 10, filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-
     html2pdf().set(opt).from(html).save();
   }
+
   const filteredCustomers = customers.filter(c => c.Name?.toLowerCase().includes(customerSearch.toLowerCase())).slice(0, 8);
   const statuses = ['Pending', 'Done', 'Levererad', 'Skickad', 'Edited'];
 
@@ -421,34 +420,34 @@ function OrderForm() {
                 </thead>
                 <tbody>
                   {items.length === 0 ? (
-  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">لا توجد منتجات</td></tr>
-) : items.map((item, i) => (
-  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-    <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">{item.ProductCode}</td>
-    <td className="px-4 py-3 text-xs">{item.NameSE}</td>
-    <td className="px-4 py-3 text-right text-xs">{item.NameAR}</td>
-    <td className="px-4 py-3 text-center">
-      <input type="number" value={item.Boxes} min="1"
-        onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Boxes: Number(e.target.value), RowTotal: Number(e.target.value) * it.PiecesPerBox * it.Price} : it))}
-        className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
-    </td>
-<td className="px-4 py-3 text-center">
-  <input type="number" value={item.PiecesPerBox} min="1"
-    onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, PiecesPerBox: Number(e.target.value), RowTotal: it.Boxes * Number(e.target.value) * it.Price} : it))}
-    className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
-</td>
-    <td className="px-4 py-3 text-right">
-      <input type="number" value={item.Price}
-        onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Price: Number(e.target.value), RowTotal: it.Boxes * it.PiecesPerBox * Number(e.target.value)} : it))}
-        className="w-20 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
-    </td>
-    <td className="px-4 py-3 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
-    <td className="px-4 py-3 text-center">
-      <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))}
-        className="text-red-400 hover:text-red-600 font-bold">✕</button>
-    </td>
-  </tr>
-))}
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">لا توجد منتجات</td></tr>
+                  ) : items.map((item, i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">{item.ProductCode}</td>
+                      <td className="px-4 py-3 text-xs">{item.NameSE}</td>
+                      <td className="px-4 py-3 text-right text-xs">{item.NameAR}</td>
+                      <td className="px-4 py-3 text-center">
+                        <input type="number" value={item.Boxes} min="1"
+                          onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Boxes: Number(e.target.value), RowTotal: Number(e.target.value) * it.PiecesPerBox * it.Price} : it))}
+                          className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input type="number" value={item.PiecesPerBox} min="1"
+                          onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, PiecesPerBox: Number(e.target.value), RowTotal: it.Boxes * Number(e.target.value) * it.Price} : it))}
+                          className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <input type="number" value={item.Price}
+                          onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Price: Number(e.target.value), RowTotal: it.Boxes * it.PiecesPerBox * Number(e.target.value)} : it))}
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))}
+                          className="text-red-400 hover:text-red-600 font-bold">✕</button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200">
