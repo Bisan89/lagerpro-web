@@ -432,7 +432,11 @@ function OrderForm() {
         onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Boxes: Number(e.target.value), RowTotal: Number(e.target.value) * it.PiecesPerBox * it.Price} : it))}
         className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
     </td>
-    <td className="px-4 py-3 text-center">{item.PiecesPerBox}</td>
+<td className="px-4 py-3 text-center">
+  <input type="number" value={item.PiecesPerBox} min="1"
+    onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, PiecesPerBox: Number(e.target.value), RowTotal: it.Boxes * Number(e.target.value) * it.Price} : it))}
+    className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+</td>
     <td className="px-4 py-3 text-right">
       <input type="number" value={item.Price}
         onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Price: Number(e.target.value), RowTotal: it.Boxes * it.PiecesPerBox * Number(e.target.value)} : it))}
