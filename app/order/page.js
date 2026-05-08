@@ -421,22 +421,30 @@ function OrderForm() {
                 </thead>
                 <tbody>
                   {items.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">لا توجد منتجات</td></tr>
-                  ) : items.map((item, i) => (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">{item.ProductCode}</td>
-                      <td className="px-4 py-3 text-xs">{item.NameSE}</td>
-                      <td className="px-4 py-3 text-right text-xs">{item.NameAR}</td>
-                      <td className="px-4 py-3 text-center">{item.Boxes}</td>
-                      <td className="px-4 py-3 text-center">{item.PiecesPerBox}</td>
-                      <td className="px-4 py-3 text-right">{Number(item.Price).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))}
-                          className="text-red-400 hover:text-red-600 font-bold">✕</button>
-                      </td>
-                    </tr>
-                  ))}
+  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">لا توجد منتجات</td></tr>
+) : items.map((item, i) => (
+  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+    <td className="px-4 py-3 font-mono text-gray-500 whitespace-nowrap">{item.ProductCode}</td>
+    <td className="px-4 py-3 text-xs">{item.NameSE}</td>
+    <td className="px-4 py-3 text-right text-xs">{item.NameAR}</td>
+    <td className="px-4 py-3 text-center">
+      <input type="number" value={item.Boxes} min="1"
+        onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Boxes: Number(e.target.value), RowTotal: Number(e.target.value) * it.PiecesPerBox * it.Price} : it))}
+        className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+    </td>
+    <td className="px-4 py-3 text-center">{item.PiecesPerBox}</td>
+    <td className="px-4 py-3 text-right">
+      <input type="number" value={item.Price}
+        onChange={e => setItems(prev => prev.map((it, j) => j === i ? {...it, Price: Number(e.target.value), RowTotal: it.Boxes * it.PiecesPerBox * Number(e.target.value)} : it))}
+        className="w-20 border border-gray-300 rounded px-2 py-1 text-right text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+    </td>
+    <td className="px-4 py-3 text-right font-bold">{Number(item.RowTotal).toFixed(2)}</td>
+    <td className="px-4 py-3 text-center">
+      <button onClick={() => setItems(prev => prev.filter((_, j) => j !== i))}
+        className="text-red-400 hover:text-red-600 font-bold">✕</button>
+    </td>
+  </tr>
+))}
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200">
