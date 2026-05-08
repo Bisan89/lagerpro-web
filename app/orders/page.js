@@ -65,18 +65,6 @@ export default function Orders() {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
     if (!url || !token) { router.push('/'); return; }
-    const u = sessionStorage.getItem('user');
-    if (u) {
-      const parsed = JSON.parse(u);
-      const PERMISSIONS = {
-        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
-        Lager: ['artiklar','order','orders','lager','inkop'],
-        Forsaljning: ['artiklar','order','orders','kunder'],
-      };
-      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
-      if (!allowed.includes('orders')) { router.push('/dashboard'); return; }
-    }
-    setReady(true);
     await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, token, sql, args }) });
   }
@@ -85,18 +73,6 @@ export default function Orders() {
     const url = sessionStorage.getItem('turso_url');
     const token = sessionStorage.getItem('turso_token');
     if (!url || !token) { router.push('/'); return; }
-    const u = sessionStorage.getItem('user');
-    if (u) {
-      const parsed = JSON.parse(u);
-      const PERMISSIONS = {
-        Admin: ['artiklar','order','orders','kunder','lager','inkop','redovisning'],
-        Lager: ['artiklar','order','orders','lager','inkop'],
-        Forsaljning: ['artiklar','order','orders','kunder'],
-      };
-      const allowed = PERMISSIONS[parsed.Role] || PERMISSIONS['Forsaljning'];
-      if (!allowed.includes('orders')) { router.push('/dashboard'); return; }
-    }
-    setReady(true);
     const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, token, sql, args }) });
     const data = await res.json();
@@ -135,10 +111,14 @@ export default function Orders() {
       const delivered = data.rows || [];
 
       for (const order of delivered) {
-        // جيب عناصر الطلبية
+        // جيب عناصر الطلبية مع ProductId من Products لو ما كان محفوظ
         const itemsRes = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url, token,
-            sql: 'SELECT ProductId, Boxes FROM OrderItems WHERE OrderId=? AND ProductId IS NOT NULL',
+            sql: `SELECT oi.Boxes, 
+                  COALESCE(oi.ProductId, p.ProductId) as ProductId
+                  FROM OrderItems oi
+                  LEFT JOIN Products p ON p.ProductCode = oi.ProductCode
+                  WHERE oi.OrderId=? AND (oi.ProductId IS NOT NULL OR p.ProductId IS NOT NULL)`,
             args: [order.OrderId] }) });
         const itemsData = await itemsRes.json();
         const items = itemsData.rows || [];
@@ -178,12 +158,16 @@ export default function Orders() {
       await exe('UPDATE Orders SET Status=?, DeliveryDate=? WHERE OrderId=?',
         ['Levererad', today, o.OrderId]);
 
-      // 2. جيب عناصر الطلبية
+      // 2. جيب عناصر الطلبية مع ProductId من Products لو ما كان محفوظ
       const url = sessionStorage.getItem('turso_url');
       const token = sessionStorage.getItem('turso_token');
       const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, token,
-          sql: 'SELECT ProductId, Boxes FROM OrderItems WHERE OrderId=? AND ProductId IS NOT NULL',
+          sql: `SELECT oi.Boxes,
+                COALESCE(oi.ProductId, p.ProductId) as ProductId
+                FROM OrderItems oi
+                LEFT JOIN Products p ON p.ProductCode = oi.ProductCode
+                WHERE oi.OrderId=? AND (oi.ProductId IS NOT NULL OR p.ProductId IS NOT NULL)`,
           args: [o.OrderId] }) });
       const data = await res.json();
       const items = data.rows || [];
@@ -300,12 +284,10 @@ export default function Orders() {
       </div>
 
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        {/* بحث */}
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
           placeholder="بحث بالعميل أو رقم الطلب..."
           className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D3E50]" />
 
-        {/* Chips */}
         <div className="flex gap-2 flex-wrap">
           {chips.map(chip => (
             <button key={chip.key} onClick={() => setChipFilter(chip.key)}
