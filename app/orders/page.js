@@ -124,8 +124,38 @@ export default function Orders() {
     if (!confirm(`تأكيد تسليم الطلب #${o.OrderId} للعميل ${o.CustomerName}؟`)) return;
     setDelivering(o.OrderId);
     try {
+      const today = new Date().toISOString().slice(0, 10);
+
+      // 1. غيّر حالة الطلبية
       await exe('UPDATE Orders SET Status=?, DeliveryDate=? WHERE OrderId=?',
-        ['Levererad', new Date().toISOString().slice(0, 10), o.OrderId]);
+        ['Levererad', today, o.OrderId]);
+
+      // 2. جيب عناصر الطلبية
+      const url = sessionStorage.getItem('turso_url');
+      const token = sessionStorage.getItem('turso_token');
+      const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, token,
+          sql: 'SELECT ProductId, Boxes FROM OrderItems WHERE OrderId=? AND ProductId IS NOT NULL',
+          args: [o.OrderId] }) });
+      const data = await res.json();
+      const items = data.rows || [];
+
+      // 3. عمل OUT movement لكل منتج
+      for (const item of items) {
+        if (!item.ProductId || Number(item.Boxes) <= 0) continue;
+        const checkRes = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, token,
+            sql: "SELECT COUNT(*) as c FROM StockMovements WHERE OrderId=? AND ProductId=? AND MovementType='OUT'",
+            args: [o.OrderId, item.ProductId] }) });
+        const checkData = await checkRes.json();
+        if (Number(checkData.rows?.[0]?.c) > 0) continue;
+
+        await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, token,
+            sql: "INSERT INTO StockMovements (ProductId, MovementType, Boxes, MovementDate, Note, OrderId) VALUES (?,?,?,?,?,?)",
+            args: [item.ProductId, 'OUT', item.Boxes, today, `Order #${o.OrderId}`, o.OrderId] }) });
+      }
+
       setOrders(prev => prev.map(ord =>
         ord.OrderId === o.OrderId ? { ...ord, Status: 'Levererad' } : ord));
       showToast(`تم تسليم الطلب #${o.OrderId} ✔`);
