@@ -213,8 +213,12 @@ function OrderForm() {
       // ✅ احفظ ProductId في قاعدة البيانات
       for (const item of items)
         await execute('INSERT INTO OrderItems (OrderId, ProductCode, NameSE, NameAR, Boxes, PiecesPerBox, Price, RowTotal, ProductId) VALUES (?,?,?,?,?,?,?,?,?)',
-          [oid, item.ProductCode, item.NameSE, item.NameAR, item.Boxes, item.PiecesPerBox, item.Price, item.RowTotal, item.ProductId || null]);
-      showToast('تم الحفظ بنجاح!');
+[oid, item.ProductCode, item.NameSE, item.NameAR, 
+     Number(item.Boxes), 
+     Number(item.PiecesPerBox), 
+     parseFloat(String(item.Price).replace(',', '.')),   // ← هون
+     parseFloat(String(item.RowTotal).replace(',', '.')), // ← وهون
+     item.ProductId || null]);      showToast('تم الحفظ بنجاح!');
       setTimeout(() => router.push('/orders'), 1200);
     } catch (e) { showToast('خطأ: ' + e.message, 'error'); }
     setSaving(false);
