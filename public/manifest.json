@@ -1,7 +1,7 @@
 {
-  "name": "Lager Pro",
-  "short_name": "LagerPro",
-  "description": "نظام إدارة المستودع",
+  "name": "Warehouse",
+"short_name": "Warehouse",
+"description": "نظام إدارة المستودع",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#2D3E50",
