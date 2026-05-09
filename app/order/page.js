@@ -85,7 +85,7 @@ function OrderForm() {
         p.NameSE?.toLowerCase().includes(productSearch.toLowerCase()) ||
         p.NameAR?.includes(productSearch) ||
         p.ProductCode?.includes(productSearch)
-      ).slice(0, 10);
+      ).slice(0, 30);
       setFilteredProducts(f);
       setShowProductList(true);
     } else { setShowProductList(false); }
